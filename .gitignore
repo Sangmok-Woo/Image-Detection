@@ -1,0 +1,13 @@
+# 데이터셋 폴더 제외
+data/
+archive/
+
+# 가상 환경 제외
+venv/
+.venv/
+
+# 파이썬 캐시 파일 및 시스템 파일
+__pycache__/
+*.pyc
+.DS_Store
+
