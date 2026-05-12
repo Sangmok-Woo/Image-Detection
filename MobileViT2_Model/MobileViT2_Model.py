@@ -4,9 +4,9 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import os
 import datetime
 
-# --- 하이퍼파라미터 설정 (여기서 한 번에 관리하세요) ---
+# --- 하이퍼파라미터 설정
 IMG_SIZE = 224  # 256에서 224로 하향 조정 (메모리 확보)
-BATCH_SIZE = 16  # 4에서 8로 살짝 올려보되, 또 터지면 4로 낮추세요
+BATCH_SIZE = 16  #터지면 8로 낮추기
 EPOCHS = 5
 LEARNING_RATE = 0.0001
 DATA_PATH = './data/train/'
@@ -56,8 +56,7 @@ def mobilevit_block(x, num_transformer_blocks, projection_dim, patch_size=2):
         
     global_features = layers.Reshape((h, w, projection_dim))(global_features)
     
-    # x(Skip connection)와 global_features의 채널 수를 맞춰서 합쳐야 합니다.
-    # 만약 x의 채널이 다르면 1x1 conv로 맞춰줍니다.
+    # x(Skip connection)와 global_features의 채널 수를 맞추기
     if x.shape[-1] != projection_dim:
         x_skip = conv_block(x, projection_dim, kernel_size=1, activation=None)
     else:
@@ -94,7 +93,7 @@ if __name__ == "__main__":
         try:
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            print("✅ GPU 메모리 유연 할당 설정 완료")
+            print("GPU 메모리 유연 할당 설정 완료")
         except RuntimeError as e:
             print(e)
 
@@ -136,4 +135,4 @@ if __name__ == "__main__":
     model_filename = f'mobilevit_model_{timestamp}.h5'
 
     model.save(model_filename)
-    print(f"✅ 모델이 {model_filename}으로 저장되었습니다!")
+    print(f"모델이 {model_filename}으로 저장되었습니다!")
