@@ -1,9 +1,11 @@
-import base64
 import os
+os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
+import base64
 import streamlit as st
 
 from model_utils import load_mobilevit_model, pre_process_img_mobilevit
-from analysis_utils import get_vlm_explanation
+from analysis_utils import get_vlm_explanation, generate_gradcam_overlay
 
 # --- 설정 및 리소스 로드 ---
 st.set_page_config(page_title="AI vs REAL Detector", layout="wide")
@@ -82,7 +84,8 @@ if user_image is not None:
             )
             
             # 3. 상세 리포트 (하단)
-            heatmap_placeholder.image(user_image, use_container_width=True) # 히트맵 로직 연결 전 가변 공간
+            heatmap_img = generate_gradcam_overlay(image_bytes, mobilevit_model)
+            heatmap_placeholder.image(heatmap_img, use_container_width=True)
             explanation = get_vlm_explanation(prob, result_word)
             vlm_explanation_placeholder.info(explanation)
             

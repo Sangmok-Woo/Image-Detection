@@ -1,25 +1,339 @@
+import os
+os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-import numpy as np
-import os
-import streamlit as st
+import requests
+import io
+from PIL import Image
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
-@st.cache_resource
-def load_mobilevit_model():
-    model_path = 'MobileViT2_Model/MobileViT2_Model.h5'
-    if not os.path.exists(model_path):
-        return None
-    return tf.keras.models.load_model(model_path)
 
-def pre_process_img_mobilevit(image, model):
-    target_size = (224, 224) 
-    img = load_img(image, target_size=target_size)
-    img_arr = img_to_array(img) / 255.0
-    img_arr = np.expand_dims(img_arr, axis=0)
-    prediction = model.predict(img_arr)
-    return prediction
+# ---------------------------------------------------------------------------
+# 1. Grad-CAM 히트맵 생성
+# ---------------------------------------------------------------------------
 
-def get_vlm_explanation(prob, result_word):
-    if result_word == "AI Generated":
-        return f"이 이미지는 생성 모델 특유의 패턴이 감지되었습니다. 특히 경계선의 부자연스러움과 픽셀의 비정상적인 분포가 관찰됩니다."
-    return f"이 이미지는 자연스러운 이미지 노이즈와 광원 처리를 보여주고 있습니다. 인공적인 생성 징후가 발견되지 않았습니다."
+def _get_last_conv_layer(model):
+    """
+    모델에서 GAP 직전 마지막 Conv2D 레이어를 자동으로 찾습니다.
+    MobileViT v2 아키텍처 기준: conv_block(512) 레이어가 타겟입니다.
+    """
+    last_conv = None
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.Conv2D):
+            last_conv = layer
+    if last_conv is None:
+        raise ValueError("모델에서 Conv2D 레이어를 찾을 수 없습니다.")
+    return last_conv.name
+
+
+def get_gradcam_heatmap(img_array: np.ndarray, model) -> np.ndarray:
+    """
+    Grad-CAM 알고리즘으로 히트맵 배열을 생성합니다.
+
+    원리:
+      - 마지막 Conv 레이어의 feature map을 추출
+      - sigmoid 출력에 대한 각 feature map 채널의 gradient를 계산
+      - gradient를 채널별로 평균 → 각 채널의 중요도(가중치) 산출
+      - 가중합으로 히트맵 생성 → 0~1 정규화
+
+    Args:
+        img_array: 전처리된 이미지 (1, 224, 224, 3), float32, 0~1 범위
+        model: 로드된 Keras 모델
+
+    Returns:
+        np.ndarray: (224, 224) 크기의 히트맵, 값 범위 0~1
+    """
+    last_conv_layer_name = _get_last_conv_layer(model)
+
+    # 마지막 Conv 출력과 최종 예측을 동시에 뱉는 서브모델 구성
+    grad_model = tf.keras.Model(
+        inputs=model.input,
+        outputs=[
+            model.get_layer(last_conv_layer_name).output,
+            model.output
+        ]
+    )
+
+    with tf.GradientTape() as tape:
+        conv_outputs, predictions = grad_model(img_array, training=False)
+        # 이진분류 sigmoid 출력 (1개 뉴런)
+        loss = predictions[:, 0]
+
+    # conv feature map에 대한 gradient
+    grads = tape.gradient(loss, conv_outputs)  # shape: (1, H, W, C)
+
+    # 채널별 gradient 평균 → 채널 중요도 가중치
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))  # shape: (C,)
+
+    # feature map에 가중치 적용
+    conv_outputs = conv_outputs[0]  # (H, W, C)
+    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]  # (H, W, 1)
+    heatmap = tf.squeeze(heatmap)  # (H, W)
+
+    # ReLU + 정규화 (음수 제거, 0~1 스케일링)
+    heatmap = tf.nn.relu(heatmap).numpy()
+    if heatmap.max() > 0:
+        heatmap = heatmap / heatmap.max()
+
+    return heatmap  # (H, W), float32, 0~1
+
+
+def overlay_heatmap_on_image(
+    original_img_bytes: bytes,
+    heatmap: np.ndarray,
+    alpha: float = 0.45
+) -> Image.Image:
+    """
+    원본 이미지 위에 Grad-CAM 히트맵을 컬러맵으로 오버레이합니다.
+
+    Args:
+        original_img_bytes: 업로드된 원본 이미지 바이트
+        heatmap: get_gradcam_heatmap()의 반환값 (H, W), 0~1
+        alpha: 히트맵 투명도 (0=투명, 1=불투명), 기본 0.45
+
+    Returns:
+        PIL.Image: 히트맵이 오버레이된 최종 이미지
+    """
+    # 원본 이미지 로드 및 224×224 리사이즈
+    original = Image.open(io.BytesIO(original_img_bytes)).convert('RGB')
+    original_resized = original.resize((224, 224))
+
+    # 히트맵을 224×224로 업스케일 후 컬러맵 적용 (jet: 파랑→초록→빨강)
+    heatmap_resized = np.array(
+        Image.fromarray(np.uint8(heatmap * 255)).resize((224, 224), Image.BILINEAR)
+    ) / 255.0
+
+    colormap = cm.get_cmap('jet')
+    heatmap_colored = colormap(heatmap_resized)[:, :, :3]  # RGB만 (알파 제거)
+    heatmap_colored = np.uint8(heatmap_colored * 255)
+
+    # 원본과 히트맵 블렌딩
+    original_arr = np.array(original_resized, dtype=np.float32)
+    heatmap_arr = np.array(heatmap_colored, dtype=np.float32)
+    blended = (1 - alpha) * original_arr + alpha * heatmap_arr
+    blended = np.clip(blended, 0, 255).astype(np.uint8)
+
+    # 범례 추가 (colorbar)
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4),
+                             gridspec_kw={'width_ratios': [6, 0.3]})
+
+    axes[0].imshow(blended)
+    axes[0].axis('off')
+    axes[0].set_title('Grad-CAM Heatmap', fontsize=11, pad=8)
+
+    # colorbar
+    norm = matplotlib.colors.Normalize(vmin=0, vmax=1)
+    cb = matplotlib.colorbar.ColorbarBase(
+        axes[1], cmap=cm.jet, norm=norm, orientation='vertical'
+    )
+    cb.set_label('Activation', fontsize=8)
+    cb.set_ticks([0, 0.5, 1.0])
+    cb.set_ticklabels(['Low', 'Mid', 'High'])
+
+    plt.tight_layout(pad=1.0)
+
+    # Figure → PIL Image 변환
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+    plt.close(fig)
+    buf.seek(0)
+
+    return Image.open(buf)
+
+
+def generate_gradcam_overlay(
+    image_bytes: bytes,
+    model
+) -> Image.Image:
+    """
+    app.py에서 호출하는 Grad-CAM 진입점.
+    이미지 바이트와 모델을 받아 히트맵 오버레이 이미지를 반환합니다.
+
+    사용법 (app.py):
+        from analysis_utils import generate_gradcam_overlay
+        heatmap_img = generate_gradcam_overlay(image_bytes, mobilevit_model)
+        heatmap_placeholder.image(heatmap_img, use_container_width=True)
+
+    Args:
+        image_bytes: user_image.read()로 읽은 바이트
+        model: load_mobilevit_model()로 로드된 모델
+
+    Returns:
+        PIL.Image: 히트맵 오버레이 이미지
+    """
+    # 전처리 (모델 입력 형식과 동일하게)
+    img = Image.open(io.BytesIO(image_bytes)).convert('RGB').resize((224, 224))
+    img_array = np.array(img, dtype=np.float32) / 255.0
+    img_array = np.expand_dims(img_array, axis=0)  # (1, 224, 224, 3)
+
+    # Grad-CAM 계산
+    heatmap = get_gradcam_heatmap(img_array, model)
+
+    # 오버레이 생성
+    result_img = overlay_heatmap_on_image(image_bytes, heatmap)
+
+    return result_img
+
+
+# ---------------------------------------------------------------------------
+# 2. LLM 분석 파이프라인
+# ---------------------------------------------------------------------------
+
+def analyze_prediction(prob: float) -> dict:
+    """
+    sigmoid 확률값을 다차원 분석 지표로 변환합니다.
+    """
+    is_real = prob >= 0.5
+    verdict = "REAL" if is_real else "AI Generated"
+
+    confidence_score = prob if is_real else (1.0 - prob)
+    confidence_pct = round(confidence_score * 100, 2)
+
+    if confidence_score >= 0.90:
+        confidence_level = "매우 높음"
+        confidence_desc = "모델이 강한 확신을 가지고 판별했습니다."
+    elif confidence_score >= 0.75:
+        confidence_level = "높음"
+        confidence_desc = "모델이 비교적 명확한 근거로 판별했습니다."
+    elif confidence_score >= 0.60:
+        confidence_level = "보통"
+        confidence_desc = "일부 특징이 경계선 근처에 위치하여 불확실성이 존재합니다."
+    else:
+        confidence_level = "낮음"
+        confidence_desc = "판별 경계값(0.5)에 근접합니다. 두 클래스의 특성을 동시에 보유할 수 있습니다."
+
+    margin_from_boundary = round(abs(prob - 0.5), 4)
+    boundary_proximity = "경계선 근접" if margin_from_boundary < 0.15 else "경계선과 충분한 거리"
+
+    texture_analysis = {
+        "overall_naturalness": round(confidence_score, 3),
+        "edge_sharpness": "자연적" if is_real else "인공적 과선명 또는 과부드러움 가능성",
+        "noise_distribution": "자연적 센서 노이즈 패턴" if is_real else "균일하거나 비자연적인 노이즈 분포 가능성",
+        "lighting_coherence": "일관된 광원 처리" if is_real else "광원 불일치 또는 과도한 HDR 처리 가능성",
+        "frequency_pattern": "정상 주파수 분포" if is_real else "고주파 성분의 비자연적 분포 가능성",
+    }
+
+    return {
+        "verdict": verdict,
+        "raw_probability": round(float(prob), 6),
+        "is_real": is_real,
+        "confidence_score": confidence_score,
+        "confidence_pct": confidence_pct,
+        "confidence_level": confidence_level,
+        "confidence_description": confidence_desc,
+        "margin_from_boundary": margin_from_boundary,
+        "boundary_proximity": boundary_proximity,
+        "texture_analysis": texture_analysis,
+        "model_name": "MobileViT v2",
+        "decision_threshold": 0.5,
+    }
+
+
+def build_llm_prompt(analysis: dict, image_base64: str | None = None):
+    system_context = """당신은 컴퓨터 비전 및 생성형 AI 탐지 전문가입니다.
+MobileViT v2 모델의 추론 결과와 Grad-CAM 히트맵 분석 데이터를 바탕으로
+모델이 왜 해당 결론을 내렸는지 설명해주세요.
+
+원칙:
+1. 기술적 근거를 일반 사용자도 이해하기 쉽게 설명
+2. 신뢰도에 따라 확신 강도 조절 (낮은 신뢰도 = 유보적 표현)
+3. Grad-CAM 히트맵에서 모델이 주목한 영역을 언급
+4. 3~5문장으로 간결하게
+5. 한국어로 응답"""
+
+    analysis_text = f"""## MobileViT v2 추론 결과
+
+- 판정: {analysis['verdict']}
+- 확률값(sigmoid): {analysis['raw_probability']} (0=AI생성, 1=실제)
+- 신뢰도: {analysis['confidence_pct']}% ({analysis['confidence_level']})
+- {analysis['confidence_description']}
+- 결정 경계(0.5)로부터 거리: {round(analysis['margin_from_boundary']*100, 1)}% ({analysis['boundary_proximity']})
+- 엣지 처리: {analysis['texture_analysis']['edge_sharpness']}
+- 노이즈 분포: {analysis['texture_analysis']['noise_distribution']}
+- 광원 일관성: {analysis['texture_analysis']['lighting_coherence']}
+
+위 데이터를 바탕으로 "{analysis['verdict']}" 판별 근거를 설명해주세요."""
+
+    if image_base64:
+        user_content = [
+            {"type": "image", "source": {
+                "type": "base64",
+                "media_type": "image/jpeg",
+                "data": image_base64
+            }},
+            {"type": "text", "text": analysis_text}
+        ]
+    else:
+        user_content = analysis_text
+
+    return [{"role": "user", "content": user_content}], system_context
+
+
+def call_llm(messages: list, system_context: str) -> str:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return _fallback_explanation(messages)
+
+    try:
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 600,
+                "system": system_context,
+                "messages": messages,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return "\n".join(
+            b["text"] for b in data.get("content", []) if b.get("type") == "text"
+        ).strip()
+
+    except requests.exceptions.Timeout:
+        return "⚠️ LLM 분석 요청 시간이 초과되었습니다."
+    except Exception as e:
+        return f"⚠️ 분석 중 오류: {str(e)}"
+
+
+def _fallback_explanation(messages) -> str:
+    content = messages[0]["content"]
+    text = content if isinstance(content, str) else " ".join(
+        c["text"] for c in content if c.get("type") == "text"
+    )
+    if "REAL" in text and "AI Generated" not in text:
+        return (
+            "이 이미지는 실제 촬영 이미지의 특성을 보여줍니다. "
+            "자연스러운 노이즈 분포, 광원 처리의 일관성, 엣지의 자연스러운 처리가 관찰됩니다. "
+            "AI 생성 모델 특유의 아티팩트 패턴이 감지되지 않았습니다."
+        )
+    return (
+        "이 이미지는 AI 생성 모델의 특성이 감지되었습니다. "
+        "경계선의 인공적 매끄러움, 비자연적인 텍스처 균일성 등 "
+        "생성 모델 특유의 패턴이 관찰됩니다."
+    )
+
+
+def get_vlm_explanation(
+    prob: float,
+    result_word: str,
+    image_base64: str | None = None,
+) -> str:
+    """
+    app.py 호출 진입점.
+    prob + result_word → 분석 → LLM 프롬프트 → 자연어 설명 반환
+    """
+    analysis = analyze_prediction(prob)
+    messages, system_context = build_llm_prompt(analysis, image_base64=image_base64)
+    return call_llm(messages, system_context)
