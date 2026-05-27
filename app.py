@@ -22,25 +22,10 @@ load_css("./styles/style.css")
 mobilevit_model = load_mobilevit_model()
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-robot_b64 = ""
-if os.path.exists("styles/robot.png"):
-    with open("styles/robot.png", "rb") as f:
-        robot_b64 = base64.b64encode(f.read()).decode()
-
-robot_img = (
-    f'<img src="data:image/png;base64,{robot_b64}" '
-    f'style="width:60px;height:60px;object-fit:contain;flex-shrink:0;">'
-    if robot_b64 else ""
-)
-
-st.markdown(f"""
-<div style="display:flex;align-items:center;gap:18px;padding:8px 0 28px;">
-  {robot_img}
-  <div>
-    <p class="main-title">AI vs REAL</p>
-    <p class="sub-title">Generative Image Forgery Detection System</p>
-    <span class="model-badge">MobileViT v2 &nbsp;·&nbsp; 224 × 224 &nbsp;·&nbsp; Binary Classification</span>
-  </div>
+st.markdown("""
+<div class="header">
+  <p class="main-title">Image-Detection</p>
+  <p class="sub-title">이미지 위변조 탐지 시스템</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -51,10 +36,7 @@ with col_img:
     st.markdown('<p class="section-label">Input Image</p>', unsafe_allow_html=True)
     image_placeholder = st.empty()
     image_placeholder.markdown(
-        '<div class="image-placeholder">'
-        '<span style="font-size:2rem;">🖼️</span>'
-        '<span>No image uploaded yet</span>'
-        '</div>',
+        '<div class="image-placeholder"><span>No image uploaded yet</span></div>',
         unsafe_allow_html=True
     )
     user_image = st.file_uploader(
@@ -73,7 +55,7 @@ with col_result:
 
 # ── Deep Analysis Report ───────────────────────────────────────────────────────
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown('<p class="section-header">🔬 Deep Analysis Report</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-header">Deep Analysis Report</p>', unsafe_allow_html=True)
 
 rep_left, rep_right = st.columns([1, 1], gap="medium")
 
@@ -105,7 +87,7 @@ if user_image is not None:
         unsafe_allow_html=True
     )
 
-    with st.spinner("Analyzing image…"):
+    with st.spinner("Analyzing…"):
         try:
             predictions = pre_process_img_mobilevit(user_image, mobilevit_model)
             prob = float(predictions[0][0])
@@ -113,22 +95,19 @@ if user_image is not None:
             result_word = "AI Generated" if is_ai else "REAL"
             confidence = 1 - prob if is_ai else prob
 
-            verdict_class = "verdict-ai" if is_ai else "verdict-real"
-            verdict_label = "AI GENERATED" if is_ai else "REAL IMAGE"
+            verdict_label = "AI Generated" if is_ai else "Real"
             bar_class = "bar-fill-ai" if is_ai else "bar-fill-real"
             bar_pct = f"{confidence * 100:.1f}"
 
             result_placeholder.markdown(f"""
             <div class="result-card">
-              <div class="{verdict_class}">{verdict_label}</div>
+              <p class="verdict-text">{verdict_label}</p>
               <p class="confidence-value">{confidence:.1%}</p>
-              <p class="confidence-sub">Confidence Score</p>
+              <p class="confidence-sub">Confidence</p>
               <div class="bar-track">
                 <div class="bar-fill {bar_class}" style="width:{bar_pct}%;"></div>
               </div>
-              <p class="result-meta">
-                Raw score: {prob:.4f} &nbsp;|&nbsp; Threshold: 0.50
-              </p>
+              <p class="result-meta">score {prob:.4f} &nbsp;/&nbsp; threshold 0.50</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -145,9 +124,6 @@ if user_image is not None:
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div class="footer">'
-    'MobileViT v2 &nbsp;·&nbsp; Input 224 × 224 &nbsp;·&nbsp; '
-    'Binary Classification &nbsp;·&nbsp; Threshold 0.50'
-    '</div>',
+    '<div class="footer">MobileViT v2 &nbsp;·&nbsp; Threshold 0.50</div>',
     unsafe_allow_html=True
 )

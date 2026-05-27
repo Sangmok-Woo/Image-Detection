@@ -1,273 +1,205 @@
 /* ============================================
-   Base & Background
+   Variables
    ============================================ */
-* {
-  box-sizing: border-box;
+:root {
+  --bg:          #0a0a0a;
+  --bg-card:     rgba(255, 255, 255, 0.03);
+  --border:      rgba(255, 255, 255, 0.08);
+  --border-dash: rgba(255, 255, 255, 0.1);
+  --text:        rgba(255, 255, 255, 0.88);
+  --text-sub:    rgba(255, 255, 255, 0.35);
+  --text-dim:    rgba(255, 255, 255, 0.15);
+  --accent:      rgba(255, 255, 255, 0.7);
+  --bar-ai:      rgba(255, 255, 255, 0.5);
+  --bar-real:    rgba(255, 255, 255, 0.9);
 }
+
+/* ============================================
+   Base
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; }
 
 html, body,
 [data-testid="stAppViewContainer"],
 [data-testid="stApp"],
 .stApp {
-  background: linear-gradient(135deg, #070714 0%, #0f0f31 55%, #0a1628 100%) !important;
+  background: var(--bg) !important;
   min-height: 100vh;
+  color: var(--text);
 }
 
 [data-testid="stMainBlockContainer"],
 .stMainBlockContainer {
-  padding: 2rem 4rem;
+  padding: 2.5rem 4rem;
   max-width: 100%;
 }
 
 /* ============================================
    Header
    ============================================ */
+.header { padding: 0 0 2rem 0; }
+
 .main-title {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 2.6rem;
-  font-weight: 800;
-  background: linear-gradient(90deg, #00d4ff 0%, #0077ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
   margin: 0 0 4px 0;
-  line-height: 1.1;
+  letter-spacing: -0.5px;
 }
 
 .sub-title {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.45);
-  margin: 0 0 12px 0;
-  letter-spacing: 0.5px;
-}
-
-.model-badge {
-  display: inline-block;
-  background: rgba(0, 212, 255, 0.12);
-  border: 1px solid rgba(0, 212, 255, 0.3);
-  color: #00d4ff;
-  padding: 4px 14px;
-  border-radius: 20px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 1px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  margin: 0;
 }
 
 /* ============================================
-   Section Labels
+   Labels
    ============================================ */
 .section-label {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 2.5px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  letter-spacing: 2px;
   text-transform: uppercase;
   margin-bottom: 10px;
 }
 
 .section-header {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
-  border-left: 3px solid #00d4ff;
-  padding-left: 12px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
   margin: 0 0 16px 0;
 }
 
 /* ============================================
-   Cards (Glassmorphism)
-   ============================================ */
-.glass-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 24px;
-  backdrop-filter: blur(12px);
-}
-
-/* ============================================
-   Image placeholder (before upload)
+   Image area
    ============================================ */
 .image-placeholder {
-  background: rgba(255, 255, 255, 0.025);
-  border: 2px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  height: 300px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-dash);
+  border-radius: 10px;
+  height: 280px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.2);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.85rem;
-  gap: 8px;
+  color: var(--text-dim);
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.82rem;
 }
 
 .image-preview img {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  filter: grayscale(15%);
 }
 
 /* ============================================
-   Result Card (awaiting)
+   Result — waiting
    ============================================ */
 .result-waiting {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 16px;
-  padding: 48px 24px;
-  text-align: center;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: rgba(255, 255, 255, 0.2);
-  font-size: 0.85rem;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
 }
 
 /* ============================================
-   Result Card (filled)
+   Result — filled
    ============================================ */
 .result-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 32px 28px;
-  text-align: center;
-  backdrop-filter: blur(12px);
+  padding: 28px 4px;
 }
 
-/* Verdict Badges */
-.verdict-ai {
-  display: inline-block;
-  background: linear-gradient(135deg, #ff4b4b 0%, #c0392b 100%);
-  color: #fff;
-  padding: 10px 36px;
-  border-radius: 50px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  box-shadow: 0 6px 24px rgba(255, 75, 75, 0.35);
-  margin-bottom: 20px;
-}
-
-.verdict-real {
-  display: inline-block;
-  background: linear-gradient(135deg, #00c853 0%, #087f23 100%);
-  color: #fff;
-  padding: 10px 36px;
-  border-radius: 50px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  box-shadow: 0 6px 24px rgba(0, 200, 83, 0.35);
-  margin-bottom: 20px;
-}
-
-/* Confidence number */
-.confidence-value {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 3rem;
+.verdict-text {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 1.4rem;
   font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 4px 0;
+  color: #fff;
+  margin: 0 0 20px 0;
+  letter-spacing: 0.3px;
+}
+
+.confidence-value {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
   line-height: 1;
+  letter-spacing: -1px;
 }
 
 .confidence-sub {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 1.5px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-sub);
+  letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 20px;
+  margin: 6px 0 20px;
 }
 
-/* Confidence Bar */
 .bar-track {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.07);
   border-radius: 100px;
-  height: 8px;
+  height: 2px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .bar-fill {
   height: 100%;
   border-radius: 100px;
-  transition: width 1s ease-out;
+  transition: width 0.8s ease-out;
 }
 
-.bar-fill-ai {
-  background: linear-gradient(90deg, #ff7043, #ff4b4b);
-}
+.bar-fill-ai   { background: var(--bar-ai); }
+.bar-fill-real { background: var(--bar-real); }
 
-.bar-fill-real {
-  background: linear-gradient(90deg, #69f0ae, #00c853);
-}
-
-/* Raw score / threshold */
 .result-meta {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", sans-serif;
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.2);
-  letter-spacing: 0.5px;
+  color: var(--text-dim);
   margin: 0;
 }
 
 /* ============================================
-   Analysis Report — empty state
+   Analysis section
    ============================================ */
 .analysis-waiting {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  height: 220px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.18);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", sans-serif;
   font-size: 0.82rem;
+  color: var(--text-dim);
 }
 
-/* Analysis Reasoning text box */
 .reasoning-box {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 20px 22px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.5);
   line-height: 1.7;
-}
-
-/* ============================================
-   File Uploader overrides
-   ============================================ */
-.stFileUploader span,
-.stFileUploader button,
-.stFileUploader p {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-
-[data-testid="stFileUploaderDropzone"] {
-  border: 2px dashed rgba(0, 212, 255, 0.25) !important;
-  border-radius: 12px !important;
-  background: rgba(0, 212, 255, 0.025) !important;
-}
-
-[data-testid="stFileUploaderDropzone"]:hover {
-  border-color: rgba(0, 212, 255, 0.5) !important;
-  background: rgba(0, 212, 255, 0.05) !important;
 }
 
 /* ============================================
@@ -275,21 +207,27 @@ html, body,
    ============================================ */
 hr {
   border: none !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-top: 1px solid var(--border) !important;
   margin: 2rem 0 !important;
 }
 
 /* ============================================
-   Spinner / Info overrides
+   File Uploader
    ============================================ */
-[data-testid="stSpinner"] p {
-  color: rgba(255, 255, 255, 0.6) !important;
+.stFileUploader span,
+.stFileUploader button,
+.stFileUploader p {
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 
-[data-testid="stAlert"] {
-  background: rgba(0, 212, 255, 0.05) !important;
-  border: 1px solid rgba(0, 212, 255, 0.2) !important;
-  border-radius: 12px !important;
+[data-testid="stFileUploaderDropzone"] {
+  border: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  background: var(--bg-card) !important;
+}
+
+[data-testid="stFileUploaderDropzone"]:hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
 /* ============================================
@@ -297,21 +235,21 @@ hr {
    ============================================ */
 .footer {
   text-align: center;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.15);
-  padding: 24px 0 12px;
-  letter-spacing: 0.5px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  padding: 20px 0 8px;
+  letter-spacing: 1px;
 }
 
 /* ============================================
    Scrollbar
    ============================================ */
-::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
 }
 
 /* ============================================
@@ -319,27 +257,12 @@ hr {
    ============================================ */
 @media (max-width: 1024px) {
   [data-testid="stMainBlockContainer"],
-  .stMainBlockContainer {
-    padding: 1.5rem 2rem;
-  }
-  .main-title { font-size: 2rem; }
+  .stMainBlockContainer { padding: 1.5rem 2rem; }
 }
 
 @media (max-width: 768px) {
   [data-testid="stMainBlockContainer"],
-  .stMainBlockContainer {
-    padding: 1rem 1rem;
-  }
-  .main-title { font-size: 1.6rem; }
-  .verdict-ai, .verdict-real {
-    font-size: 1rem;
-    padding: 8px 24px;
-    letter-spacing: 2px;
-  }
-  .confidence-value { font-size: 2.2rem; }
-}
-
-@media (max-width: 480px) {
-  .main-title { font-size: 1.3rem; }
-  .model-badge { display: none; }
+  .stMainBlockContainer { padding: 1rem; }
+  .main-title { font-size: 1.5rem; }
+  .confidence-value { font-size: 2.5rem; }
 }
