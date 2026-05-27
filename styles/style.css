@@ -5,13 +5,12 @@
   --bg:          #0a0a0a;
   --bg-card:     rgba(255, 255, 255, 0.03);
   --border:      rgba(255, 255, 255, 0.08);
-  --border-dash: rgba(255, 255, 255, 0.1);
+  --border-dash: rgba(255, 255, 255, 0.12);
   --text:        rgba(255, 255, 255, 0.88);
   --text-sub:    rgba(255, 255, 255, 0.35);
   --text-dim:    rgba(255, 255, 255, 0.15);
-  --accent:      rgba(255, 255, 255, 0.7);
-  --bar-ai:      rgba(255, 255, 255, 0.5);
-  --bar-real:    rgba(255, 255, 255, 0.9);
+  --bar-ai:      rgba(255, 255, 255, 0.4);
+  --bar-real:    rgba(255, 255, 255, 0.92);
 }
 
 /* ============================================
@@ -56,7 +55,7 @@ html, body,
 }
 
 /* ============================================
-   Labels
+   Labels & Utilities
    ============================================ */
 .section-label {
   font-family: "Segoe UI", sans-serif;
@@ -68,78 +67,100 @@ html, body,
   margin-bottom: 10px;
 }
 
-.section-header {
+.section-gap { height: 1.5rem; }
+
+/* ============================================
+   Upload hint (initial state)
+   ============================================ */
+.upload-hint {
+  text-align: center;
   font-family: "Segoe UI", sans-serif;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-  margin: 0 0 16px 0;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  padding: 1.5rem 0 0.5rem;
+}
+
+/* ============================================
+   File Uploader
+   ============================================ */
+.stFileUploader span,
+.stFileUploader button,
+.stFileUploader p {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+  border: 1px dashed var(--border-dash) !important;
+  border-radius: 12px !important;
+  background: var(--bg-card) !important;
+  min-height: 120px !important;
+  transition: border-color 0.25s ease !important;
+}
+
+[data-testid="stFileUploaderDropzone"]:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
 }
 
 /* ============================================
    Image area
    ============================================ */
-.image-placeholder {
-  background: var(--bg-card);
-  border: 1px dashed var(--border-dash);
-  border-radius: 10px;
-  height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-dim);
-  font-family: "Segoe UI", sans-serif;
-  font-size: 0.82rem;
-}
-
 .image-preview img {
   width: 100%;
   height: auto;
+  max-height: 380px;
+  object-fit: contain;
   display: block;
   border-radius: 10px;
   border: 1px solid var(--border);
-  filter: grayscale(15%);
 }
 
 /* ============================================
-   Result — waiting
-   ============================================ */
-.result-waiting {
-  height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Segoe UI", sans-serif;
-  font-size: 0.82rem;
-  color: var(--text-dim);
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-}
-
-/* ============================================
-   Result — filled
+   Result Card
    ============================================ */
 .result-card {
   padding: 28px 4px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.verdict-text {
+/* Verdict Badge */
+.verdict-badge {
+  display: inline-block;
   font-family: "Segoe UI", sans-serif;
-  font-size: 1.4rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  color: #fff;
-  margin: 0 0 20px 0;
-  letter-spacing: 0.3px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 22px;
+  width: fit-content;
+}
+
+/* AI Generated — outline style */
+.badge-ai {
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+}
+
+/* REAL — filled style */
+.badge-real {
+  color: #0a0a0a;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid transparent;
 }
 
 .confidence-value {
   font-family: "Segoe UI", sans-serif;
-  font-size: 3.5rem;
+  font-size: 4rem;
   font-weight: 700;
   color: #fff;
   margin: 0;
   line-height: 1;
-  letter-spacing: -1px;
+  letter-spacing: -2px;
 }
 
 .confidence-sub {
@@ -148,13 +169,14 @@ html, body,
   color: var(--text-sub);
   letter-spacing: 2px;
   text-transform: uppercase;
-  margin: 6px 0 20px;
+  margin: 8px 0 24px;
 }
 
+/* Gauge Bar */
 .bar-track {
   background: rgba(255, 255, 255, 0.07);
   border-radius: 100px;
-  height: 2px;
+  height: 8px;
   overflow: hidden;
   margin-bottom: 16px;
 }
@@ -162,7 +184,7 @@ html, body,
 .bar-fill {
   height: 100%;
   border-radius: 100px;
-  transition: width 0.8s ease-out;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .bar-fill-ai   { background: var(--bar-ai); }
@@ -176,23 +198,28 @@ html, body,
 }
 
 /* ============================================
-   Analysis section
+   Expander (Deep Analysis)
    ============================================ */
-.analysis-waiting {
-  background: var(--bg-card);
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Segoe UI", sans-serif;
-  font-size: 0.82rem;
-  color: var(--text-dim);
+[data-testid="stExpander"] {
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  background: var(--bg-card) !important;
+  overflow: hidden;
 }
 
+[data-testid="stExpander"] summary,
+[data-testid="stExpanderToggleIcon"] {
+  color: var(--text) !important;
+  font-family: "Segoe UI", sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+}
+
+/* ============================================
+   Analysis — Reasoning
+   ============================================ */
 .reasoning-box {
-  background: var(--bg-card);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 18px 20px;
@@ -212,25 +239,6 @@ hr {
 }
 
 /* ============================================
-   File Uploader
-   ============================================ */
-.stFileUploader span,
-.stFileUploader button,
-.stFileUploader p {
-  color: rgba(255, 255, 255, 0.5) !important;
-}
-
-[data-testid="stFileUploaderDropzone"] {
-  border: 1px dashed rgba(255, 255, 255, 0.12) !important;
-  border-radius: 10px !important;
-  background: var(--bg-card) !important;
-}
-
-[data-testid="stFileUploaderDropzone"]:hover {
-  border-color: rgba(255, 255, 255, 0.25) !important;
-}
-
-/* ============================================
    Footer
    ============================================ */
 .footer {
@@ -238,7 +246,7 @@ hr {
   font-family: "Segoe UI", sans-serif;
   font-size: 0.68rem;
   color: var(--text-dim);
-  padding: 20px 0 8px;
+  padding: 32px 0 8px;
   letter-spacing: 1px;
 }
 
@@ -264,5 +272,7 @@ hr {
   [data-testid="stMainBlockContainer"],
   .stMainBlockContainer { padding: 1rem; }
   .main-title { font-size: 1.5rem; }
-  .confidence-value { font-size: 2.5rem; }
+  .confidence-value { font-size: 2.8rem; }
+  .image-preview img { max-height: 240px; }
+  .result-card { min-height: unset; padding: 20px 4px; }
 }
