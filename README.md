@@ -1,3 +1,12 @@
+git lfs install
+git clone https://github.com/9rydud/Jolp_appPy_styleCss_Modified.git
+cd Jolp_appPy_styleCss_Modified
+git lfs pull
+conda create -n imgdet python=3.11 -y
+conda activate imgdet
+pip install streamlit==1.40.0 tensorflow==2.15.0 "numpy>=1.26.0,<2.1.0" Pillow
+python -m streamlit run app.py
+
 # 🛡️ AI vs REAL: 이미지 위변조 탐지 시스템  
 ### Generative Image Forgery Detection with MobileViT v2
 
