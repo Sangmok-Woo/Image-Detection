@@ -1,12 +1,3 @@
-git lfs install
-git clone https://github.com/9rydud/Jolp_appPy_styleCss_Modified.git
-cd Jolp_appPy_styleCss_Modified
-git lfs pull
-conda create -n imgdet python=3.11 -y
-conda activate imgdet
-pip install streamlit==1.40.0 tensorflow==2.15.0 "numpy>=1.26.0,<2.1.0" Pillow
-python -m streamlit run app.py
-
 # 🛡️ AI vs REAL: 이미지 위변조 탐지 시스템  
 ### Generative Image Forgery Detection with MobileViT v2
 
@@ -50,23 +41,11 @@ python -m streamlit run app.py
 
 ## TensorFlow 오류시
 
-# 1. 기존에 설치가 꼬인 텐서플로우 관련 패키지들을 강제로 완전히 삭제합니다.
+1. 기존에 설치가 꼬인 텐서플로우 관련 패키지들을 강제로 완전히 삭제합니다.
 pip uninstall -y tensorflow tensorflow-intel tf_keras keras
 
-# 2. 캐시를 무시하고 텐서플로우 2.15.0 버전을 깨끗하게 다시 설치합니다.
+2. 캐시를 무시하고 텐서플로우 2.15.0 버전을 깨끗하게 다시 설치합니다.
 pip install --no-cache-dir tensorflow==2.15.0 tf_keras==2.15.0
-
-# 📂 프로젝트 구조
-
-GP/
-├── MobileViT2_Model/
-│   └── MobileViT2_Model.ht      # 핵심 탐지 모델 (Input: 224x224)
-├── styles/
-│   ├── style.css                # 커스텀 UI 디자인
-│   ├── robot.png                # 상단 로고
-│   └── detectiveMag.svg         # 돋보기 아이콘
-├── app.py                       # 서비스 메인 로직
-└── README.md                    # 프로젝트 문서
 
 ---
 
