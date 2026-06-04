@@ -29,22 +29,14 @@ python -m streamlit run app.py
 
 ## 1️⃣ 가상 환경 설정
 
-```powershell
-# 가상 환경 생성
 py -3.11 -m venv venv
-
-# 가상 환경 활성화
 .\venv\Scripts\activate
-```
 
 ---
 
 ## 2️⃣ 필수 패키지 설치
 
-# pip 시스템 자체를 최신 버전으로 안전하게 업그레이드합니다.
 python -m pip install --upgrade pip
-
-# 위에서 정리한 버전의 requirements.txt 패키지들을 한 번에 설치합니다.
 pip install -r requirements.txt
 
 
@@ -52,15 +44,20 @@ pip install -r requirements.txt
 
 ## 3️⃣ 앱 실행
 
-```powershell
 python -m streamlit run app.py
-```
 
 ---
 
+## TensorFlow 오류시
+
+# 1. 기존에 설치가 꼬인 텐서플로우 관련 패키지들을 강제로 완전히 삭제합니다.
+pip uninstall -y tensorflow tensorflow-intel tf_keras keras
+
+# 2. 캐시를 무시하고 텐서플로우 2.15.0 버전을 깨끗하게 다시 설치합니다.
+pip install --no-cache-dir tensorflow==2.15.0 tf_keras==2.15.0
+
 # 📂 프로젝트 구조
 
-```plaintext
 GP/
 ├── MobileViT2_Model/
 │   └── MobileViT2_Model.ht      # 핵심 탐지 모델 (Input: 224x224)
@@ -70,7 +67,6 @@ GP/
 │   └── detectiveMag.svg         # 돋보기 아이콘
 ├── app.py                       # 서비스 메인 로직
 └── README.md                    # 프로젝트 문서
-```
 
 ---
 
