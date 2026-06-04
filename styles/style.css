@@ -183,3 +183,23 @@ body {
     font-size: 0.9rem;
   }
 }
+
+
+
+.stAlert div[data-testid="stMarkdownContainer"] p {
+  color: white !important;
+  font-size: 1.3rem !important;
+  line-height: 1.85 !important;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.stAlert div[data-testid="stMarkdownContainer"] h1,
+.stAlert div[data-testid="stMarkdownContainer"] h2,
+.stAlert div[data-testid="stMarkdownContainer"] h3,
+.stAlert div[data-testid="stMarkdownContainer"] h4 {
+  color: #5af9fb !important; 
+  font-size: 1.65rem !important;
+  margin-top: 1.2em !important;
+  margin-bottom: 0.6em !important;
+  font-weight: 700 !important;
+}

@@ -1,3 +1,12 @@
-numpy>=1.26.0,<2.1.0
+# [Core & UI]
+numpy>=1.23.5,<1.26.0
+Pillow>=10.0.0
 streamlit==1.40.0
-tensorflow==2.18.0
+
+# [Deep Learning] 최신 텐서플로우와 레거시 호환 패키지 쌍
+tensorflow==2.15.0
+tf_keras==2.15.0
+
+# [Visualization & Network]
+matplotlib>=3.7.0
+requests>=2.31.0
