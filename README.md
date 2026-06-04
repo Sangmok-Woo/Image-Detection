@@ -32,10 +32,12 @@ py -3.11 -m venv venv
 
 ## 2️⃣ 필수 패키지 설치
 
-```powershell
-pip install --upgrade pip
-pip install streamlit tensorflow==2.15.0 numpy Pillow
-```
+# pip 시스템 자체를 최신 버전으로 안전하게 업그레이드합니다.
+python -m pip install --upgrade pip
+
+# 위에서 정리한 버전의 requirements.txt 패키지들을 한 번에 설치합니다.
+pip install -r requirements.txt
+
 
 ---
 

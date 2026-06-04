@@ -1,12 +1,10 @@
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from keras.preprocessing.image import load_img, img_to_array
 import numpy as np
 import os
 import streamlit as st
 
 
-
-# 필요한 경우 레거시 Keras 설정을 활성화할 수 있습니다.
 # os.environ['TF_USE_LEGACY_KERAS'] = '1'
 
 @st.cache_resource

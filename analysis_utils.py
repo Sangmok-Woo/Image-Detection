@@ -1,9 +1,14 @@
 import os
+import sys
+import datetime
+import keras
+
+sys.modules['tensorflow.keras'] = keras 
 os.environ['TF_USE_LEGACY_KERAS'] = '1'
 
+from keras.preprocessing.image import load_img, img_to_array
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import requests
 import io
 from PIL import Image
@@ -14,7 +19,7 @@ import matplotlib.cm as cm
 
 
 # ---------------------------------------------------------------------------
-# 1. Grad-CAM 히트맵 생성
+# 1. Grad-CAM 히트맵 생성 및 시각화 엔진
 # ---------------------------------------------------------------------------
 
 def _get_last_conv_layer(model):
@@ -34,23 +39,9 @@ def _get_last_conv_layer(model):
 def get_gradcam_heatmap(img_array: np.ndarray, model) -> np.ndarray:
     """
     Grad-CAM 알고리즘으로 히트맵 배열을 생성합니다.
-
-    원리:
-      - 마지막 Conv 레이어의 feature map을 추출
-      - sigmoid 출력에 대한 각 feature map 채널의 gradient를 계산
-      - gradient를 채널별로 평균 → 각 채널의 중요도(가중치) 산출
-      - 가중합으로 히트맵 생성 → 0~1 정규화
-
-    Args:
-        img_array: 전처리된 이미지 (1, 224, 224, 3), float32, 0~1 범위
-        model: 로드된 Keras 모델
-
-    Returns:
-        np.ndarray: (224, 224) 크기의 히트맵, 값 범위 0~1
     """
     last_conv_layer_name = _get_last_conv_layer(model)
 
-    # 마지막 Conv 출력과 최종 예측을 동시에 뱉는 서브모델 구성
     grad_model = tf.keras.Model(
         inputs=model.input,
         outputs=[
@@ -61,26 +52,20 @@ def get_gradcam_heatmap(img_array: np.ndarray, model) -> np.ndarray:
 
     with tf.GradientTape() as tape:
         conv_outputs, predictions = grad_model(img_array, training=False)
-        # 이진분류 sigmoid 출력 (1개 뉴런)
         loss = predictions[:, 0]
 
-    # conv feature map에 대한 gradient
-    grads = tape.gradient(loss, conv_outputs)  # shape: (1, H, W, C)
+    grads = tape.gradient(loss, conv_outputs)
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
 
-    # 채널별 gradient 평균 → 채널 중요도 가중치
-    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))  # shape: (C,)
+    conv_outputs = conv_outputs[0]
+    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]
+    heatmap = tf.squeeze(heatmap)
 
-    # feature map에 가중치 적용
-    conv_outputs = conv_outputs[0]  # (H, W, C)
-    heatmap = conv_outputs @ pooled_grads[..., tf.newaxis]  # (H, W, 1)
-    heatmap = tf.squeeze(heatmap)  # (H, W)
-
-    # ReLU + 정규화 (음수 제거, 0~1 스케일링)
     heatmap = tf.nn.relu(heatmap).numpy()
     if heatmap.max() > 0:
         heatmap = heatmap / heatmap.max()
 
-    return heatmap  # (H, W), float32, 0~1
+    return heatmap
 
 
 def overlay_heatmap_on_image(
@@ -90,56 +75,43 @@ def overlay_heatmap_on_image(
 ) -> Image.Image:
     """
     원본 이미지 위에 Grad-CAM 히트맵을 컬러맵으로 오버레이합니다.
-
-    Args:
-        original_img_bytes: 업로드된 원본 이미지 바이트
-        heatmap: get_gradcam_heatmap()의 반환값 (H, W), 0~1
-        alpha: 히트맵 투명도 (0=투명, 1=불투명), 기본 0.45
-
-    Returns:
-        PIL.Image: 히트맵이 오버레이된 최종 이미지
     """
-    # 원본 이미지 로드 및 224×224 리사이즈
     original = Image.open(io.BytesIO(original_img_bytes)).convert('RGB')
     original_resized = original.resize((224, 224))
 
-    # 히트맵을 224×224로 업스케일 후 컬러맵 적용 (jet: 파랑→초록→빨강)
     heatmap_resized = np.array(
         Image.fromarray(np.uint8(heatmap * 255)).resize((224, 224), Image.BILINEAR)
     ) / 255.0
 
     colormap = cm.get_cmap('jet')
-    heatmap_colored = colormap(heatmap_resized)[:, :, :3]  # RGB만 (알파 제거)
+    heatmap_colored = colormap(heatmap_resized)[:, :, :3]
     heatmap_colored = np.uint8(heatmap_colored * 255)
 
-    # 원본과 히트맵 블렌딩
     original_arr = np.array(original_resized, dtype=np.float32)
     heatmap_arr = np.array(heatmap_colored, dtype=np.float32)
     blended = (1 - alpha) * original_arr + alpha * heatmap_arr
     blended = np.clip(blended, 0, 255).astype(np.uint8)
 
-    # 범례 추가 (colorbar)
-    fig, axes = plt.subplots(1, 2, figsize=(8, 4),
-                             gridspec_kw={'width_ratios': [6, 0.3]})
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5.5),
+                             gridspec_kw={'width_ratios': [6, 0.35]})
 
     axes[0].imshow(blended)
     axes[0].axis('off')
-    axes[0].set_title('Grad-CAM Heatmap', fontsize=11, pad=8)
+    axes[0].set_title('Grad-CAM Heatmap', fontsize=14, pad=12)
 
-    # colorbar
     norm = matplotlib.colors.Normalize(vmin=0, vmax=1)
     cb = matplotlib.colorbar.ColorbarBase(
         axes[1], cmap=cm.jet, norm=norm, orientation='vertical'
     )
-    cb.set_label('Activation', fontsize=8)
+    cb.set_label('Activation', fontsize=10)
     cb.set_ticks([0, 0.5, 1.0])
     cb.set_ticklabels(['Low', 'Mid', 'High'])
+    cb.ax.tick_params(labelsize=9)
 
-    plt.tight_layout(pad=1.0)
+    plt.tight_layout()
 
-    # Figure → PIL Image 변환
     buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+    plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', pad_inches=0.02)
     plt.close(fig)
     buf.seek(0)
 
@@ -151,43 +123,23 @@ def generate_gradcam_overlay(
     model
 ) -> Image.Image:
     """
-    app.py에서 호출하는 Grad-CAM 진입점.
-    이미지 바이트와 모델을 받아 히트맵 오버레이 이미지를 반환합니다.
-
-    사용법 (app.py):
-        from analysis_utils import generate_gradcam_overlay
-        heatmap_img = generate_gradcam_overlay(image_bytes, mobilevit_model)
-        heatmap_placeholder.image(heatmap_img, use_container_width=True)
-
-    Args:
-        image_bytes: user_image.read()로 읽은 바이트
-        model: load_mobilevit_model()로 로드된 모델
-
-    Returns:
-        PIL.Image: 히트맵 오버레이 이미지
+    app.py에서 호출하는 Grad-CAM 내부 진입점
     """
-    # 전처리 (모델 입력 형식과 동일하게)
     img = Image.open(io.BytesIO(image_bytes)).convert('RGB').resize((224, 224))
     img_array = np.array(img, dtype=np.float32) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)  # (1, 224, 224, 3)
+    img_array = np.expand_dims(img_array, axis=0)
 
-    # Grad-CAM 계산
     heatmap = get_gradcam_heatmap(img_array, model)
-
-    # 오버레이 생성
     result_img = overlay_heatmap_on_image(image_bytes, heatmap)
 
     return result_img
 
 
 # ---------------------------------------------------------------------------
-# 2. LLM 분석 파이프라인
+# 2. VLM / LLM 분석 파이프라인 (터미널 로그 관측 시스템 내장)
 # ---------------------------------------------------------------------------
 
 def analyze_prediction(prob: float) -> dict:
-    """
-    sigmoid 확률값을 다차원 분석 지표로 변환합니다.
-    """
     is_real = prob >= 0.5
     verdict = "REAL" if is_real else "AI Generated"
 
@@ -277,7 +229,17 @@ MobileViT v2 모델의 추론 결과와 Grad-CAM 히트맵 분석 데이터를 �
 def call_llm(messages: list, system_context: str) -> str:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠️ [Claude API] ANTHROPIC_API_KEY 환경 변수가 식별되지 않아 기본 내장 문구를 출력합니다.")
         return _fallback_explanation(messages)
+
+    api_key = api_key.strip()
+    
+    current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"\n==================================================================")
+    print(f"[{current_time}] 🚀 [Claude API] 앤트로픽 원격 서버로 분석 요청을 송신합니다...")
+    print(f"  - 공식 승인 모델: claude-sonnet-4-6")
+    print(f"  - API Key 식별 정보 (앞 10자리): {api_key[:10]}...")
+    print(f"==================================================================")
 
     try:
         response = requests.post(
@@ -288,22 +250,41 @@ def call_llm(messages: list, system_context: str) -> str:
                 "content-type": "application/json",
             },
             json={
-                "model": "claude-sonnet-4-20250514",
+                "model": "claude-sonnet-4-6",
                 "max_tokens": 600,
                 "system": system_context,
                 "messages": messages,
             },
-            timeout=30,
+            timeout=30 
         )
-        response.raise_for_status()
+        
+        resp_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[{resp_time}] ✅ [Claude API] 앤트로픽 서버로부터 피드백 신호를 수신했습니다.")
+        print(f"  - HTTP 상태 응답 코드 (Status Code): {response.status_code}")
+        
+        response.raise_for_status() 
+        
         data = response.json()
+        print(f"  - 📝 파싱 결과: JSON 페이로드 변환에 성공했습니다. 결과를 대시보드 화면에 주입합니다.\n")
+        
         return "\n".join(
             b["text"] for b in data.get("content", []) if b.get("type") == "text"
         ).strip()
 
     except requests.exceptions.Timeout:
+        err_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[{err_time}] ❌ [Claude API Error] 앤트로픽 서버 제한 시간 초과 (30초 만료)\n")
         return "⚠️ LLM 분석 요청 시간이 초과되었습니다."
+        
     except Exception as e:
+        err_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[{err_time}] ❌ [Claude API Error] 앤트로픽 통신 관문에서 차단 오류가 발생했습니다.")
+        print(f"  - 상세 예외 덤프 내용: {str(e)}")
+        
+        if 'response' in locals() and response is not None:
+            print(f"  - 서버가 회신한 날것의 에러 텍스트 (Raw Payload): {response.text}")
+        print(f"==================================================================\n")
+        
         return f"⚠️ 분석 중 오류: {str(e)}"
 
 
@@ -316,7 +297,7 @@ def _fallback_explanation(messages) -> str:
         return (
             "이 이미지는 실제 촬영 이미지의 특성을 보여줍니다. "
             "자연스러운 노이즈 분포, 광원 처리의 일관성, 엣지의 자연스러운 처리가 관찰됩니다. "
-            "AI 생성 모델 특유의 아티팩트 패턴이 감지되지 않았습니다."
+            "AI 생성 모델 특유 of 아티팩트 패턴이 감지되지 않았습니다."
         )
     return (
         "이 이미지는 AI 생성 모델의 특성이 감지되었습니다. "
@@ -330,10 +311,6 @@ def get_vlm_explanation(
     result_word: str,
     image_base64: str | None = None,
 ) -> str:
-    """
-    app.py 호출 진입점.
-    prob + result_word → 분석 → LLM 프롬프트 → 자연어 설명 반환
-    """
     analysis = analyze_prediction(prob)
     messages, system_context = build_llm_prompt(analysis, image_base64=image_base64)
     return call_llm(messages, system_context)

@@ -1,18 +1,31 @@
 import os
+import sys
+import keras
+
+sys.modules['tensorflow.keras'] = keras 
 os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+venv_keras_path = os.path.join(base_dir, "venv", "Lib", "site-packages")
+if venv_keras_path not in sys.path:
+    sys.path.insert(0, venv_keras_path)
 
 import base64
 import streamlit as st
+import tensorflow as tf
+import numpy as np
 
 from model_utils import load_mobilevit_model, pre_process_img_mobilevit
 from analysis_utils import get_vlm_explanation, generate_gradcam_overlay
+from keras.preprocessing.image import load_img, img_to_array
 
 # --- 설정 및 리소스 로드 ---
 st.set_page_config(page_title="AI vs REAL Detector", layout="wide")
 
+
 def load_local_css(file_name):
     if os.path.exists(file_name):
-        with open(file_name) as f:
+        with open(file_name, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 load_local_css("./styles/style.css")
@@ -24,7 +37,8 @@ mobilevit_model = load_mobilevit_model()
 # Title Section
 col1, col2, col3, col4, col5 = st.columns([4,1,3,3,1], gap="small")
 with col2:
-    if os.path.exists("styles/robot.png"): st.image("styles/robot.png")
+    if os.path.exists("styles/robot.png"): 
+        st.image("styles/robot.png")
 with col3:
     st.markdown('<p class="title"> AI vs REAL Image Detection </p>', unsafe_allow_html=True)
 
@@ -39,8 +53,10 @@ with main_col_two:
         with open("styles/detectiveMag.svg", "r") as file:
             svg_content = file.read()
         c1, c2, c3 = st.columns([4,4,1], gap="small")
-        with c2: st.markdown('<p class="upload_line"> Please upload the image </p>', unsafe_allow_html=True)
-        with c3: st.markdown(f"<div class='detectiveMag1'>{svg_content}</div>", unsafe_allow_html=True)
+        with c2: 
+            st.markdown('<p class="upload_line"> Please upload the image </p>', unsafe_allow_html=True)
+        with c3: 
+            st.markdown(f"<div class='detectiveMag1'>{svg_content}</div>", unsafe_allow_html=True)
 
     user_image = st.file_uploader("png, jpg, or jpeg image", ['png', 'jpg', 'jpeg'], label_visibility='hidden')
     result_placeholder = st.empty()
@@ -65,13 +81,13 @@ if user_image is not None:
     image_base64 = base64.b64encode(image_bytes).decode('utf-8')
     image_placeholder.markdown(
         f'<div style="display: flex; justify-content: center;">'
-        f'<img src="data:image/jpeg;base64,{image_base64}" style="max-width:100%; height:auto;"/>'
+        f'<img src="data:image/jpeg;base64,{image_base64}" style="width: 100%; max-width: 550px; height: auto; border-radius: 8px;"/>'
         f'</div>', unsafe_allow_html=True
     )
 
     with st.spinner('Analyzing...'):
         try:
-            # 1. 모델 분석
+            # 1. 모델 추론
             predictions = pre_process_img_mobilevit(user_image, mobilevit_model)
             prob = predictions[0][0]
             result_word = "AI Generated" if prob < 0.5 else "REAL"
@@ -83,9 +99,22 @@ if user_image is not None:
                 unsafe_allow_html=True
             )
             
-            # 3. 상세 리포트 (하단)
+            # 3. 상세 리포트 시각화 (하단)
             heatmap_img = generate_gradcam_overlay(image_bytes, mobilevit_model)
-            heatmap_placeholder.image(heatmap_img, use_container_width=True)
+            
+            # CSS 컴포넌트 간섭을 우회하여 화면 왼쪽 열의 너비에 맞춰 이미지를 강제 확대 렌더링합니다.
+            import io
+            img_buffer = io.BytesIO()
+            heatmap_img.save(img_buffer, format="PNG")
+            img_b64 = base64.b64encode(img_buffer.getvalue()).decode()
+            
+            heatmap_placeholder.markdown(
+                f'<div style="width:100%; text-align:center;">'
+                f'<img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:700px; height:auto; border-radius:8px;"/>'
+                f'</div>', 
+                unsafe_allow_html=True
+            )
+            
             explanation = get_vlm_explanation(prob, result_word)
             vlm_explanation_placeholder.info(explanation)
             
