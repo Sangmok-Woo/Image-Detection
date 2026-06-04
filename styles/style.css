@@ -1,187 +1,280 @@
-/* Reset and global styles */
-* {
-  box-sizing: border-box;
-  /* background-color: #001220 !important; */
-  background-color:#0f0f31 !important;
- 
+/* ============================================
+   Variables
+   ============================================ */
+:root {
+  --bg:          #0a0a0a;
+  --bg-card:     rgba(255, 255, 255, 0.03);
+  --border:      rgba(255, 255, 255, 0.08);
+  --border-dash: rgba(255, 255, 255, 0.12);
+  --text:        rgba(255, 255, 255, 0.88);
+  --text-sub:    rgba(255, 255, 255, 0.35);
+  --text-dim:    rgba(255, 255, 255, 0.15);
+  --bar-ai:      rgba(255, 255, 255, 0.4);
+  --bar-real:    rgba(255, 255, 255, 0.92);
 }
 
-html,
-body {
-  height: 100vh !important;
-  width: 100%;
-  overflow-x: hidden;
-  padding: 0 !important;
+/* ============================================
+   Base
+   ============================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stApp"],
+.stApp {
+  background: var(--bg) !important;
+  min-height: 100vh;
+  color: var(--text);
 }
 
-/* Title Styling */
-.title {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 32px; /* Scalable font size */
-  text-align: center;
-  background: linear-gradient(to right, #5af9fb 0%, #1C6DF3 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-top: 0 !important;
-  
-}
-/* robot image */
-.st-emotion-cache-1xf0csu {
-  max-width: 55px !important;
-}
-
-/* main container */
+[data-testid="stMainBlockContainer"],
 .stMainBlockContainer {
-  padding-left: 5rem;
-  padding-right: 5rem;
+  padding: 2.5rem 4rem;
   max-width: 100%;
 }
 
-/* Upload Line */
-.upload_line {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1rem;
-  text-align: center;
-  color: white;
-  margin: 1em 0;
-}
+/* ============================================
+   Header
+   ============================================ */
+.header { padding: 0 0 2rem 0; }
 
-/* upload image widget customization */
-.stFileUploader span, button {
-    color: white !important; /* Set the font color to white */
-}
-
-.stSelectbox label {
-    color: white; 
-}
-.stSelectbox > div div {
-    color: white; 
-}
-
-/* select box widget customization*/
-.st-cf {
- color: white !important;
-}
-
-.stSelectbox div[data-baseweb="select"] > div:first-child {
-    border-color: #2d408d;
-}
-.st-emotion-cache-sy3zga {
-  color: white !important;
-}
-
-@keyframes blink {
-  25% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0;
-  }
-  75% {
-    opacity: 0.5;
-  }
-}
-/* Base styles for magnifying glasses */
-.detectiveMag1{
-  width: 10vw;
-  max-width: 100px;
-  max-height: 100px;
-  animation: blink 6s infinite linear;
-}
-
-
-/* Result Styling */
-.result {
-  color: rgb(179, 217, 253);
-  font-size: 1.5rem;
-  z-index: 1;
-  text-align: center;
-  margin-top: 1.5em;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.resultword {
-  text-transform: uppercase;
-  background-image: linear-gradient(
-    -225deg,
-    #8ad8e6 0%,
-    #a438f2 29%,
-    #ff007f 67%,
-    #e8a7c8 100%
-  );
-  background-size: auto auto;
-  background-clip: border-box;
-  background-size: 200% auto;
+.main-title {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
   color: #fff;
-  background-clip: text;
-  text-fill-color: transparent;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: textclip 2s linear;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.sub-title {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  margin: 0;
+}
+
+/* ============================================
+   Labels & Utilities
+   ============================================ */
+.section-label {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.section-gap { height: 1.5rem; }
+
+/* ============================================
+   Upload hint (initial state)
+   ============================================ */
+.upload-hint {
+  text-align: center;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  padding: 1.5rem 0 0.5rem;
+}
+
+/* ============================================
+   File Uploader
+   ============================================ */
+.stFileUploader span,
+.stFileUploader button,
+.stFileUploader p {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+  border: 1px dashed var(--border-dash) !important;
+  border-radius: 12px !important;
+  background: var(--bg-card) !important;
+  min-height: 120px !important;
+  transition: border-color 0.25s ease !important;
+}
+
+[data-testid="stFileUploaderDropzone"]:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* ============================================
+   Image area
+   ============================================ */
+.image-preview img {
+  width: 100%;
+  height: auto;
+  max-height: 380px;
+  object-fit: contain;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+/* ============================================
+   Result Card
+   ============================================ */
+.result-card {
+  padding: 28px 4px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Verdict Badge */
+.verdict-badge {
   display: inline-block;
-  font-size: 32px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 22px;
+  width: fit-content;
 }
 
-.prediction {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-  font-size: 14px;
+/* AI Generated — outline style */
+.badge-ai {
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
 }
 
-@keyframes textclip {
-  to {
-    background-position: 200% center;
-  }
+/* REAL — filled style */
+.badge-real {
+  color: #0a0a0a;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid transparent;
 }
 
-/* Media Queries for Responsive Design */
+.confidence-value {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 4rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.confidence-sub {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-sub);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 8px 0 24px;
+}
+
+/* Gauge Bar */
+.bar-track {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 100px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar-fill-ai   { background: var(--bar-ai); }
+.bar-fill-real { background: var(--bar-real); }
+
+.result-meta {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* ============================================
+   Expander (Deep Analysis)
+   ============================================ */
+[data-testid="stExpander"] {
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  background: var(--bg-card) !important;
+  overflow: hidden;
+}
+
+[data-testid="stExpander"] summary,
+[data-testid="stExpanderToggleIcon"] {
+  color: var(--text) !important;
+  font-family: "Segoe UI", sans-serif !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+}
+
+/* ============================================
+   Analysis — Reasoning
+   ============================================ */
+.reasoning-box {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.7;
+}
+
+/* ============================================
+   Divider
+   ============================================ */
+hr {
+  border: none !important;
+  border-top: 1px solid var(--border) !important;
+  margin: 2rem 0 !important;
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+.footer {
+  text-align: center;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  padding: 32px 0 8px;
+  letter-spacing: 1px;
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
 @media (max-width: 1024px) {
-  .title {
-    font-size: 1.8em;
-  }
-
-  .upload_line {
-    font-size: 0.9rem;
-  }
-  .result {
-    font-size: 1.2rem;
-  }
+  [data-testid="stMainBlockContainer"],
+  .stMainBlockContainer { padding: 1.5rem 2rem; }
 }
 
 @media (max-width: 768px) {
-  .title {
-    font-size: 1.5em;
-  }
-  .upload_line {
-    font-size: 0.8rem;
-  }
-
-  .result {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .title {
-    font-size: 16px !important;
-  }
-  /* robot image */
-.st-emotion-cache-1xf0csu {
-  display: none;
-}
-.upload_line {
-  margin:0rem !important;
-}
-.detectiveMag1{
- display: none;
-}
-.st-emotion-cache-ocqkz7 {
-  gap: 0 !important;
-}
-
-  .result {
-    font-size: 0.9rem;
-  }
+  [data-testid="stMainBlockContainer"],
+  .stMainBlockContainer { padding: 1rem; }
+  .main-title { font-size: 1.5rem; }
+  .confidence-value { font-size: 2.8rem; }
+  .image-preview img { max-height: 240px; }
+  .result-card { min-height: unset; padding: 20px 4px; }
 }
 
 

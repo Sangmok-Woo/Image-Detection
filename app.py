@@ -1,122 +1,163 @@
 import os
 import sys
-import keras
 
-sys.modules['tensorflow.keras'] = keras 
-os.environ['TF_USE_LEGACY_KERAS'] = '1'
-
-base_dir = os.path.dirname(os.path.abspath(__file__))
-venv_keras_path = os.path.join(base_dir, "venv", "Lib", "site-packages")
-if venv_keras_path not in sys.path:
-    sys.path.insert(0, venv_keras_path)
+try:
+    import tensorflow as tf
+    if not hasattr(tf, 'compat'):
+        print("CRITICAL: TensorFlow가 정상적으로 로드되었으나 'compat' 모듈이 누락되었습니다.", file=sys.stderr)
+except ImportError as e:
+    print(f"CRITICAL: 가상환경 내에서 tensorflow 임포트 자체를 실패했습니다. 에러명: {e}", file=sys.stderr)
 
 import base64
+import io
 import streamlit as st
-import tensorflow as tf
 import numpy as np
+
+os.environ['TF_USE_LEGACY_KERAS'] = '1'
+
+import tf_keras as keras
+sys.modules['keras'] = keras
+sys.modules['tensorflow.keras'] = keras
 
 from model_utils import load_mobilevit_model, pre_process_img_mobilevit
 from analysis_utils import get_vlm_explanation, generate_gradcam_overlay
-from keras.preprocessing.image import load_img, img_to_array
+from tf_keras.preprocessing.image import load_img, img_to_array
 
-# --- 설정 및 리소스 로드 ---
-st.set_page_config(page_title="AI vs REAL Detector", layout="wide")
+st.set_page_config(
+    page_title="AI vs REAL Detector",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-
-def load_local_css(file_name):
-    if os.path.exists(file_name):
-        with open(file_name, "r", encoding="utf-8") as f:
+def load_css(path):
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-load_local_css("./styles/style.css")
-st.markdown('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">', unsafe_allow_html=True)
+load_css("./styles/style.css")
 
 mobilevit_model = load_mobilevit_model()
 
-# --- UI 레이아웃 ---
-# Title Section
-col1, col2, col3, col4, col5 = st.columns([4,1,3,3,1], gap="small")
-with col2:
-    if os.path.exists("styles/robot.png"): 
-        st.image("styles/robot.png")
-with col3:
-    st.markdown('<p class="title"> AI vs REAL Image Detection </p>', unsafe_allow_html=True)
+# ── Header ──────────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="header">
+  <p class="main-title">AI vs REAL Image Detection</p>
+  <p class="sub-title">이미지 위변조 탐지 시스템</p>
+</div>
+""", unsafe_allow_html=True)
 
-# Main layout (상단)
-main_col_one, main_col_two = st.columns([2,2], gap="large")
-
-with main_col_one:
-    image_placeholder = st.empty()
-
-with main_col_two:
-    if os.path.exists("styles/detectiveMag.svg"):
-        with open("styles/detectiveMag.svg", "r") as file:
-            svg_content = file.read()
-        c1, c2, c3 = st.columns([4,4,1], gap="small")
-        with c2: 
-            st.markdown('<p class="upload_line"> Please upload the image </p>', unsafe_allow_html=True)
-        with c3: 
-            st.markdown(f"<div class='detectiveMag1'>{svg_content}</div>", unsafe_allow_html=True)
-
-    user_image = st.file_uploader("png, jpg, or jpeg image", ['png', 'jpg', 'jpeg'], label_visibility='hidden')
-    result_placeholder = st.empty()
-
-# 상세 분석 섹션 (하단)
-st.markdown("<br><hr>", unsafe_allow_html=True)
-st.subheader("🔬 Deep Analysis Report")
-detail_col_left, detail_col_right = st.columns([1, 1], gap="medium")
-
-with detail_col_left:
-    st.markdown("#### 🔍 Visual Heatmap")
-    heatmap_placeholder = st.empty()
-
-with detail_col_right:
-    st.markdown("#### 📝 AI Reasoning")
-    vlm_explanation_placeholder = st.empty()
-
-# --- 실행 로직 ---
-if user_image is not None:
-    # 원본 이미지 표시
-    image_bytes = user_image.read()
-    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-    image_placeholder.markdown(
-        f'<div style="display: flex; justify-content: center;">'
-        f'<img src="data:image/jpeg;base64,{image_base64}" style="width: 100%; max-width: 550px; height: auto; border-radius: 8px;"/>'
-        f'</div>', unsafe_allow_html=True
+# ── Upload Zone (centered) ───────────────────────────────────────────────────────
+_, col_up, _ = st.columns([1, 4, 1])
+with col_up:
+    user_image = st.file_uploader(
+        "이미지를 드래그하거나 클릭하여 업로드 (png, jpg, jpeg)",
+        ["png", "jpg", "jpeg"],
+        label_visibility="visible"
     )
 
-    with st.spinner('Analyzing...'):
-        try:
-            # 1. 모델 추론
-            predictions = pre_process_img_mobilevit(user_image, mobilevit_model)
-            prob = predictions[0][0]
-            result_word = "AI Generated" if prob < 0.5 else "REAL"
-            
-            # 2. 결과 출력 (상단)
-            result_placeholder.markdown(
-                f"<div class='result'><span class='prediction'>Confidence: {prob:.2%}</span> <br>"
-                f"It is a <span class='resultword'>{result_word}</span> image.</div>", 
+# ── Analysis Flow ────────────────────────────────────────────────────────────────
+if user_image is not None:
+    image_bytes = user_image.read()
+    image_b64 = base64.b64encode(image_bytes).decode()
+    file_key = f"{user_image.name}_{len(image_bytes)}"
+
+    # 세션 상태를 활용해 동일 파일 업로드 시 재연산 방지
+    if st.session_state.get("file_key") != file_key:
+        with st.spinner("Analyzing…"):
+            try:
+                preds = pre_process_img_mobilevit(io.BytesIO(image_bytes), mobilevit_model)
+                prob_val = float(preds[0][0])
+                
+                # Grad-Cam 히트맵 생성 및 Base64 인코딩 진행
+                heatmap_img = generate_gradcam_overlay(image_bytes, mobilevit_model)
+                img_buffer = io.BytesIO()
+                heatmap_img.save(img_buffer, format="PNG")
+                heatmap_b64 = base64.b64encode(img_buffer.getvalue()).decode()
+
+                st.session_state.update({
+                    "file_key": file_key,
+                    "prob": prob_val,
+                    "image_b64": image_b64,
+                    "heatmap_b64": heatmap_b64,
+                    "image_bytes": image_bytes,
+                })
+            except Exception as e:
+                st.session_state.pop("file_key", None)
+                st.error(f"Error during analysis: {e}")
+
+    if st.session_state.get("file_key") == file_key:
+        prob        = st.session_state["prob"]
+        image_b64   = st.session_state["image_b64"]
+        heatmap_b64 = st.session_state["heatmap_b64"]
+
+        is_ai       = prob < 0.5
+        result_word = "AI Generated" if is_ai else "REAL"
+        confidence  = 1 - prob if is_ai else prob
+        
+        bar_class   = "bar-fill-ai" if is_ai else "bar-fill-real"
+        badge_class = "badge-ai"    if is_ai else "badge-real"
+        bar_pct     = f"{confidence * 100:.1f}"
+
+        st.markdown("<div class='section-gap'></div>", unsafe_allow_html=True)
+
+        # ── Image + Result side-by-side (상단 레이아웃) ──────────────────────────
+        col_img, col_res = st.columns([1, 1], gap="large")
+
+        with col_img:
+            st.markdown('<p class="section-label">Input Image</p>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="image-preview">'
+                f'<img src="data:image/jpeg;base64,{image_b64}"/>'
+                f'</div>',
                 unsafe_allow_html=True
             )
+
+        with col_res:
+            st.markdown('<p class="section-label">Analysis Result</p>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="result-card">
+              <span class="verdict-badge {badge_class}">{result_word}</span>
+              <p class="confidence-value">{confidence:.1%}</p>
+              <p class="confidence-sub">Confidence</p>
+              <div class="bar-track">
+                <div class="bar-fill {bar_class}" style="width:{bar_pct}%;"></div>
+              </div>
+              <p class="result-meta">score {prob:.4f} &nbsp;/&nbsp; threshold 0.50</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Deep Analysis Report (하단 상세 리포트) ──────────────────────────────
+        with st.expander("🔬 Deep Analysis Report", expanded=True):
+            exp_left, exp_right = st.columns([1, 1], gap="medium")
             
-            # 3. 상세 리포트 시각화 (하단)
-            heatmap_img = generate_gradcam_overlay(image_bytes, mobilevit_model)
-            
-            # CSS 컴포넌트 간섭을 우회하여 화면 왼쪽 열의 너비에 맞춰 이미지를 강제 확대 렌더링합니다.
-            import io
-            img_buffer = io.BytesIO()
-            heatmap_img.save(img_buffer, format="PNG")
-            img_b64 = base64.b64encode(img_buffer.getvalue()).decode()
-            
-            heatmap_placeholder.markdown(
-                f'<div style="width:100%; text-align:center;">'
-                f'<img src="data:image/png;base64,{img_b64}" style="width:100%; max-width:700px; height:auto; border-radius:8px;"/>'
-                f'</div>', 
-                unsafe_allow_html=True
-            )
-            
-            explanation = get_vlm_explanation(prob, result_word)
-            vlm_explanation_placeholder.info(explanation)
-            
-        except Exception as e:
-            st.error(f"Error: {e}")
+            with exp_left:
+                st.markdown('<p class="section-label">🔍 Visual Heatmap</p>', unsafe_allow_html=True)
+                # 상대방 코드의 원본 이미지 출력 버그를 상목님의 Grad-Cam 처리 이미지 렌더링으로 전면 수정
+                st.markdown(
+                    f'<div style="width:100%; text-align:center;" class="image-preview">'
+                    f'<img src="data:image/png;base64,{heatmap_b64}" style="width:100%; max-width:700px; height:auto; border-radius:8px;"/>'
+                    f'</div>', 
+                    unsafe_allow_html=True
+                )
+                
+            with exp_right:
+                st.markdown('<p class="section-label">📝 AI Reasoning</p>', unsafe_allow_html=True)
+                explanation = get_vlm_explanation(prob, result_word)
+                st.markdown(
+                    f'<div class="reasoning-box">{explanation}</div>',
+                    unsafe_allow_html=True
+                )
+
+else:
+    st.session_state.pop("file_key", None)
+    st.markdown(
+        '<div class="upload-hint">이미지를 업로드하면 AI 위변조 여부를 분석합니다</div>',
+        unsafe_allow_html=True
+    )
+
+# ── Footer ───────────────────────────────────────────────────────────────────────
+st.markdown(
+    '<div class="footer">MobileViT v2 &nbsp;·&nbsp; Threshold 0.50</div>',
+    unsafe_allow_html=True
+)
