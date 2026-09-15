@@ -186,17 +186,28 @@ def analyze_prediction(prob: float) -> dict:
     }
 
 
-def build_llm_prompt(analysis: dict, image_base64: str | None = None):
+def build_llm_prompt(
+    analysis: dict,
+    image_base64: str | None = None,
+    heatmap_base64: str | None = None,
+    image_media_type: str = "image/jpeg",
+):
     system_context = """당신은 컴퓨터 비전 및 생성형 AI 탐지 전문가입니다.
-MobileViT v2 모델의 추론 결과와 Grad-CAM 히트맵 분석 데이터를 바탕으로
+
+사용자가 업로드한 원본 이미지와 MobileViT v2의 판정 결과,
+그리고 제공되는 경우 Grad-CAM 히트맵을 함께 분석하여
 모델이 왜 해당 결론을 내렸는지 설명해주세요.
 
-원칙:
-1. 기술적 근거를 일반 사용자도 이해하기 쉽게 설명
-2. 신뢰도에 따라 확신 강도 조절 (낮은 신뢰도 = 유보적 표현)
-3. Grad-CAM 히트맵에서 모델이 주목한 영역을 언급
-4. 3~5문장으로 간결하게
-5. 한국어로 응답"""
+중요한 원칙:
+1. 원본 이미지를 실제로 관찰한 뒤 설명합니다.
+2. 이미지에서 실제로 확인할 수 있는 시각적 특징을 구체적으로 언급합니다.
+3. 관찰한 특징과 MobileViT v2의 판정 결과가 어떻게 연결되는지 설명합니다.
+4. 이미지에서 확인할 수 없는 내용은 추측하거나 단정하지 않습니다.
+5. Grad-CAM 히트맵이 제공된 경우에만 모델이 주목한 영역을 언급합니다.
+6. 원본 이미지와 Grad-CAM에서 확인한 내용을 서로 구분해서 설명합니다.
+7. 모델의 신뢰도가 낮거나 결정 경계(0.5)에 가까우면 확정적으로 표현하지 않습니다.
+8. 단순히 AI/REAL 판정 결과를 반복하지 말고 이미지와 판정 결과의 관계를 설명합니다.
+9. 3~5문장으로 간결하게 한국어로 답변합니다."""
 
     analysis_text = f"""## MobileViT v2 추론 결과
 
@@ -204,42 +215,73 @@ MobileViT v2 모델의 추론 결과와 Grad-CAM 히트맵 분석 데이터를 �
 - 확률값(sigmoid): {analysis['raw_probability']} (0=AI생성, 1=실제)
 - 신뢰도: {analysis['confidence_pct']}% ({analysis['confidence_level']})
 - {analysis['confidence_description']}
-- 결정 경계(0.5)로부터 거리: {round(analysis['margin_from_boundary']*100, 1)}% ({analysis['boundary_proximity']})
+- 결정 경계(0.5)로부터 거리: {round(analysis['margin_from_boundary'] * 100, 1)}% ({analysis['boundary_proximity']})
+
+### 기존 분석 데이터
 - 엣지 처리: {analysis['texture_analysis']['edge_sharpness']}
 - 노이즈 분포: {analysis['texture_analysis']['noise_distribution']}
 - 광원 일관성: {analysis['texture_analysis']['lighting_coherence']}
+- 주파수 패턴: {analysis['texture_analysis']['frequency_pattern']}
 
-위 데이터를 바탕으로 "{analysis['verdict']}" 판별 근거를 설명해주세요."""
+첫 번째 이미지는 원본 입력 이미지입니다.
+두 번째 이미지가 제공된다면 그것은 MobileViT v2의 Grad-CAM 시각화입니다.
 
+원본 이미지에서 실제로 관찰되는 특징을 먼저 설명하고,
+그 특징이 MobileViT v2의 판정 결과와 어떻게 연결되는지 설명해주세요.
+Grad-CAM이 제공된 경우에는 모델이 주목한 영역을 함께 설명해주세요."""
+
+    user_content = []
+
+    # 1. 원본 이미지
     if image_base64:
-        user_content = [
-            {"type": "image", "source": {
+        user_content.append({
+            "type": "image",
+            "source": {
                 "type": "base64",
-                "media_type": "image/jpeg",
+                "media_type": image_media_type,
                 "data": image_base64
-            }},
-            {"type": "text", "text": analysis_text}
-        ]
-    else:
-        user_content = analysis_text
+            }
+        })
+
+    # 2. Grad-CAM 이미지
+    if heatmap_base64:
+        user_content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": "image/png",
+                "data": heatmap_base64
+            }
+        })
+
+    user_content.append({
+        "type": "text",
+        "text": analysis_text
+    })
 
     return [{"role": "user", "content": user_content}], system_context
 
 
 def call_llm(messages: list, system_context: str) -> str:
     api_key = os.environ.get("ANTHROPIC_API_KEY")
+
     if not api_key:
-        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ⚠️ [Claude API] ANTHROPIC_API_KEY 환경 변수가 식별되지 않아 기본 내장 문구를 출력합니다.")
+        print(
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            "⚠️ [Claude API] ANTHROPIC_API_KEY 환경 변수가 식별되지 않아 "
+            "기본 내장 문구를 출력합니다."
+        )
         return _fallback_explanation(messages)
 
     api_key = api_key.strip()
-    
+
     current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f"\n==================================================================")
-    print(f"[{current_time}] 🚀 [Claude API] 앤트로픽 원격 서버로 분석 요청을 송신합니다...")
-    print(f"  - 공식 승인 모델: claude-sonnet-4-6")
-    print(f"  - API Key 식별 정보 (앞 10자리): {api_key[:10]}...")
-    print(f"==================================================================")
+
+    print("\n==================================================================")
+    print(f"[{current_time}] 🚀 [Claude API] 분석 요청을 송신합니다...")
+    print("  - 모델: claude-sonnet-4-6")
+    print("  - 원본 이미지 + Grad-CAM 전달")
+    print("==================================================================")
 
     try:
         response = requests.post(
@@ -255,62 +297,59 @@ def call_llm(messages: list, system_context: str) -> str:
                 "system": system_context,
                 "messages": messages,
             },
-            timeout=30 
+            timeout=30
         )
-        
+
         resp_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{resp_time}] ✅ [Claude API] 앤트로픽 서버로부터 피드백 신호를 수신했습니다.")
-        print(f"  - HTTP 상태 응답 코드 (Status Code): {response.status_code}")
-        
-        response.raise_for_status() 
-        
+        print(
+            f"[{resp_time}] ✅ [Claude API] "
+            f"서버 응답 수신 - HTTP {response.status_code}"
+        )
+
+        response.raise_for_status()
+
         data = response.json()
-        print(f"  - 📝 파싱 결과: JSON 페이로드 변환에 성공했습니다. 결과를 대시보드 화면에 주입합니다.\n")
-        
+
         return "\n".join(
-            b["text"] for b in data.get("content", []) if b.get("type") == "text"
+            b["text"]
+            for b in data.get("content", [])
+            if b.get("type") == "text"
         ).strip()
 
     except requests.exceptions.Timeout:
-        err_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{err_time}] ❌ [Claude API Error] 앤트로픽 서버 제한 시간 초과 (30초 만료)\n")
-        return "⚠️ LLM 분석 요청 시간이 초과되었습니다."
-        
-    except Exception as e:
-        err_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print(f"[{err_time}] ❌ [Claude API Error] 앤트로픽 통신 관문에서 차단 오류가 발생했습니다.")
-        print(f"  - 상세 예외 덤프 내용: {str(e)}")
-        
-        if 'response' in locals() and response is not None:
-            print(f"  - 서버가 회신한 날것의 에러 텍스트 (Raw Payload): {response.text}")
-        print(f"==================================================================\n")
-        
-        return f"⚠️ 분석 중 오류: {str(e)}"
-
-
-def _fallback_explanation(messages) -> str:
-    content = messages[0]["content"]
-    text = content if isinstance(content, str) else " ".join(
-        c["text"] for c in content if c.get("type") == "text"
-    )
-    if "REAL" in text and "AI Generated" not in text:
-        return (
-            "이 이미지는 실제 촬영 이미지의 특성을 보여줍니다. "
-            "자연스러운 노이즈 분포, 광원 처리의 일관성, 엣지의 자연스러운 처리가 관찰됩니다. "
-            "AI 생성 모델 특유 of 아티팩트 패턴이 감지되지 않았습니다."
+        print(
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            "❌ [Claude API Error] 요청 시간이 초과되었습니다."
         )
-    return (
-        "이 이미지는 AI 생성 모델의 특성이 감지되었습니다. "
-        "경계선의 인공적 매끄러움, 비자연적인 텍스처 균일성 등 "
-        "생성 모델 특유의 패턴이 관찰됩니다."
-    )
+        return "⚠️ LLM 분석 요청 시간이 초과되었습니다."
+
+    except Exception as e:
+        print(
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"❌ [Claude API Error] {str(e)}"
+        )
+
+        if 'response' in locals() and response is not None:
+            print(f"Raw Payload: {response.text}")
+
+        return f"⚠️ 분석 중 오류: {str(e)}"
 
 
 def get_vlm_explanation(
     prob: float,
     result_word: str,
     image_base64: str | None = None,
+    heatmap_base64: str | None = None,
+    image_media_type: str = "image/jpeg",
 ) -> str:
+
     analysis = analyze_prediction(prob)
-    messages, system_context = build_llm_prompt(analysis, image_base64=image_base64)
+
+    messages, system_context = build_llm_prompt(
+        analysis,
+        image_base64=image_base64,
+        heatmap_base64=heatmap_base64,
+        image_media_type=image_media_type,
+    )
+
     return call_llm(messages, system_context)

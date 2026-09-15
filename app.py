@@ -81,6 +81,7 @@ if user_image is not None:
                     "image_b64": image_b64,
                     "heatmap_b64": heatmap_b64,
                     "image_bytes": image_bytes,
+                    "claude_explanation": None,
                 })
             except Exception as e:
                 st.session_state.pop("file_key", None)
@@ -143,7 +144,18 @@ if user_image is not None:
                 
             with exp_right:
                 st.markdown('<p class="section-label">📝 AI Reasoning</p>', unsafe_allow_html=True)
-                explanation = get_vlm_explanation(prob, result_word)
+                if "claude_explanation" not in st.session_state:
+                    with st.spinner("Claude가 이미지와 Grad-CAM을 분석하고 있습니다..."):
+                        st.session_state["claude_explanation"] = get_vlm_explanation(
+                            prob,
+                            result_word,
+                            image_base64=image_b64,
+                            heatmap_base64=heatmap_b64,
+                            image_media_type=user_image.type
+                        )
+
+                explanation = st.session_state["claude_explanation"]
+
                 st.markdown(
                     f'<div class="reasoning-box">{explanation}</div>',
                     unsafe_allow_html=True
