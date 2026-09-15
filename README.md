@@ -35,6 +35,11 @@ pip install -r requirements.txt
 
 ## 3️⃣ 앱 실행
 
+자기 PC에서 CMD를 열고:
+
+setx ANTHROPIC_API_KEY "sk-ant-여기에_키"
+CMD를 새로 열기
+
 python -m streamlit run app.py
 
 ---
