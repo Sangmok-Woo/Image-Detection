@@ -27,3 +27,6 @@ distill/work/old_model/batches/
 distill/dataset/
 distill/*.zip
 distill/__pycache__/
+distill/qwen2vl-distill/
+distill/venv-train/
+venv-train/
