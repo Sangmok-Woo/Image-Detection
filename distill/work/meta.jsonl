@@ -60,7 +60,7 @@
 {"id": "tg0059", "source": "train-00001.parquet#1129", "label": "AI", "generator": "Midjourney", "mobilevit_prob_real": 0.3491, "mobilevit_pred": "AI", "crop_box": [256, 134, 384, 262], "model": "new"}
 {"id": "tg0060", "source": "train-00001.parquet#955", "label": "AI", "generator": "ADM", "mobilevit_prob_real": 0.0551, "mobilevit_pred": "AI", "crop_box": [93, 0, 221, 128], "model": "new"}
 {"id": "tg0061", "source": "train-00001.parquet#133", "label": "AI", "generator": "GLIDE", "mobilevit_prob_real": 0.2123, "mobilevit_pred": "AI", "crop_box": [134, 0, 262, 128], "model": "new"}
-{"id": "tg0062", "source": "train-00001.parquet#271", "label": "AI", "generator": "BigGAN", "mobilevit_prob_real": 0.1144, "mobilevit_pred": "AI", "crop_box": [0, 0, 128, 128], "model": "new"}
+{"id": "tg0062", "source": "train-00001.parquet#271", "label": "AI", "generator": "BigGAN", "mobilevit_prob_real": 0.1143, "mobilevit_pred": "AI", "crop_box": [0, 0, 128, 128], "model": "new"}
 {"id": "tg0063", "source": "train-00001.parquet#798", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.4177, "mobilevit_pred": "AI", "crop_box": [66, 38, 194, 166], "model": "new"}
 {"id": "tg0064", "source": "train-00001.parquet#1342", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.2611, "mobilevit_pred": "AI", "crop_box": [203, 189, 331, 317], "model": "new"}
 {"id": "tg0065", "source": "train-00000.parquet#1969", "label": "AI", "generator": "SD15", "mobilevit_prob_real": 0.1683, "mobilevit_pred": "AI", "crop_box": [162, 107, 290, 235], "model": "new"}
@@ -324,7 +324,7 @@
 {"id": "tg0323", "source": "train-00000.parquet#46", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.5634, "mobilevit_pred": "REAL", "crop_box": [0, 256, 128, 384], "model": "new"}
 {"id": "tg0324", "source": "train-00001.parquet#708", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.6441, "mobilevit_pred": "REAL", "crop_box": [231, 0, 359, 128], "model": "new"}
 {"id": "tg0325", "source": "train-00000.parquet#1666", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.3703, "mobilevit_pred": "AI", "crop_box": [0, 52, 128, 180], "model": "new"}
-{"id": "tg0326", "source": "train-00000.parquet#1276", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.5908, "mobilevit_pred": "REAL", "crop_box": [0, 256, 128, 384], "model": "new"}
+{"id": "tg0326", "source": "train-00000.parquet#1276", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.5909, "mobilevit_pred": "REAL", "crop_box": [0, 256, 128, 384], "model": "new"}
 {"id": "tg0327", "source": "train-00000.parquet#38", "label": "REAL", "generator": "Real", "mobilevit_prob_real": 0.3127, "mobilevit_pred": "AI", "crop_box": [256, 256, 384, 384], "model": "new"}
 {"id": "tg0328", "source": "train-00001.parquet#1361", "label": "AI", "generator": "ADM", "mobilevit_prob_real": 0.0176, "mobilevit_pred": "AI", "crop_box": [107, 0, 235, 128], "model": "new"}
 {"id": "tg0329", "source": "train-00001.parquet#1905", "label": "AI", "generator": "Wukong", "mobilevit_prob_real": 0.3201, "mobilevit_pred": "AI", "crop_box": [256, 244, 384, 372], "model": "new"}

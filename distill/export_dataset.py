@@ -46,6 +46,39 @@ def assistant_text(t):
     return '\n'.join(lines)
 
 
+DETAIL_KEYS = ['scene', 'evidence_ai', 'evidence_real', 'heatmap_focus_detailed',
+               'heatmap_useful_detailed', 'heatmap_comment', 'reasoning',
+               'uncertainty', 'explanation_detailed']
+
+
+def assistant_text_detailed(t):
+    # 장면 → 양쪽 근거 → 히트맵 검증 → 저울질 → 결론. 학생이 중간 과정까지 따라 배우게 한다.
+    lines = [f"장면: {t['scene']}", '',
+             f"판정: {VERDICT_KO[t['teacher_verdict']]} (확신: {CONF_KO[t['teacher_confidence']]})", '']
+    lines.append('AI 생성 쪽 근거:')
+    lines += [f'- {o}' for o in t['evidence_ai']] or ['- 뚜렷한 것 없음']
+    lines.append('실제 촬영 쪽 근거:')
+    lines += [f'- {o}' for o in t['evidence_real']] or ['- 뚜렷한 것 없음']
+    lines.append('')
+    lines.append(f"히트맵: {t['heatmap_focus_detailed']}")
+    lines.append(f"히트맵 평가: {USEFUL_KO[t['heatmap_useful_detailed']]} — {t['heatmap_comment']}")
+    lines.append('분류기 판정과 일치' if t['agrees_with_classifier'] else '분류기 판정과 불일치')
+    lines.append('')
+    lines.append(f"판단 과정: {t['reasoning']}")
+    if t.get('uncertainty'):
+        lines.append(f"불확실한 점: {t['uncertainty']}")
+    lines.append('')
+    lines.append(f"설명: {t['explanation_detailed']}")
+    return '\n'.join(lines)
+
+
+def valid_detailed(t):
+    return (all(k in t for k in DETAIL_KEYS)
+            and t['heatmap_useful_detailed'] in USEFUL_KO
+            and isinstance(t['evidence_ai'], list) and isinstance(t['evidence_real'], list)
+            and isinstance(t['explanation_detailed'], str) and len(t['explanation_detailed']) >= 80)
+
+
 def valid(t):
     return (all(k in t for k in REQUIRED)
             and t['teacher_verdict'] in VERDICT_KO
@@ -62,7 +95,12 @@ def main():
     ap.add_argument('--n-test', type=int, default=100)
     ap.add_argument('--n-val', type=int, default=50)
     ap.add_argument('--seed', type=int, default=42)
+    ap.add_argument('--detailed', action='store_true',
+                    help='teacher_full/의 상세 설명을 assistant_text로 쓴다')
     args = ap.parse_args()
+    teacher_dir = 'teacher_full' if args.detailed else 'teacher'
+    check = (lambda t: valid(t) and valid_detailed(t)) if args.detailed else valid
+    render = assistant_text_detailed if args.detailed else assistant_text
 
     meta = {}
     with open(f'{args.work}/meta.jsonl', encoding='utf-8') as f:
@@ -71,7 +109,7 @@ def main():
             meta[m['id']] = m
 
     teacher, bad = {}, []
-    for path in sorted(glob.glob(f'{args.work}/teacher/batch_*.jsonl')):
+    for path in sorted(glob.glob(f'{args.work}/{teacher_dir}/batch_*.jsonl')):
         with open(path, encoding='utf-8') as f:
             for line in f:
                 if not line.strip():
@@ -81,7 +119,7 @@ def main():
                 except json.JSONDecodeError:
                     bad.append(line[:60])
                     continue
-                if valid(t) and t['id'] in meta:
+                if check(t) and t['id'] in meta:
                     t['agrees_with_classifier'] = t['teacher_verdict'] == meta[t['id']]['mobilevit_pred']
                     teacher[t['id']] = t
                 else:
@@ -128,7 +166,7 @@ def main():
         for src, suf in [('std', 'orig'), ('cam', 'cam'), ('crop', 'crop')]:
             shutil.copy(f'{args.work}/{src}/{i}.jpg', f'{args.out}/images/{i}_{suf}.jpg')
             imgs.append(f'images/{i}_{suf}.jpg')
-        u, a = user_text(m), assistant_text(t)
+        u, a = user_text(m), render(t)
         rows[s].append({
             'id': i, 'images': imgs,
             'messages': [{'role': 'user', 'content': '<image><image><image>' + u},
@@ -138,6 +176,8 @@ def main():
             'mobilevit_prob_real': m['mobilevit_prob_real'], 'mobilevit_pred': m['mobilevit_pred'],
             'teacher_verdict': t['teacher_verdict'], 'teacher_correct': correct,
             'heatmap_useful': t['heatmap_useful'],
+            **({'heatmap_useful_detailed': t['heatmap_useful_detailed']}
+               if 'heatmap_useful_detailed' in t else {}),
         })
 
     for s in ['train', 'val', 'test']:
@@ -160,6 +200,9 @@ def main():
         'teacher_invalid': len(bad), 'teacher_missing': len(missing),
         'teacher_accuracy': acc('teacher'), 'mobilevit_accuracy': acc('mobilevit'),
         'heatmap_useful': dict(Counter(teacher[i]['heatmap_useful'] for i in ids)),
+        **({'heatmap_useful_detailed':
+            dict(Counter(teacher[i]['heatmap_useful_detailed'] for i in ids))}
+           if args.detailed else {}),
         'dropped_teacher_wrong': dict(dropped_wrong),
         'split_sizes': {s: len(rows[s]) for s in ['train', 'val', 'test']},
     }
