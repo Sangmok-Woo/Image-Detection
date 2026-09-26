@@ -1,0 +1,16 @@
+{
+  "num_images": 256,
+  "accuracy": 0.8516,
+  "auc": 0.0,
+  "confusion_matrix": {
+    "FAKE를 FAKE로": 218,
+    "FAKE를 REAL로": 38,
+    "REAL을 FAKE로": 0,
+    "REAL을 REAL로": 0
+  },
+  "fake_precision": 1.0,
+  "fake_recall": 0.8516,
+  "real_precision": 0.0,
+  "real_recall": 0.0,
+  "data_dir": "C:\\Users\\sangmok\\Downloads\\archive\\test"
+}

@@ -11,3 +11,18 @@ __pycache__/
 *.pyc
 .DS_Store
 
+
+# 증류 작업물: 이미지는 제외하고 텍스트(meta, 교사 설명)는 저장소에 남긴다
+distill/work/std/
+distill/work/cam/
+distill/work/crop/
+distill/work/panel/
+distill/work/batches/
+distill/work/hbatches/
+distill/work/old_model/cam/
+distill/work/old_model/crop/
+distill/work/old_model/panel/
+distill/work/old_model/batches/
+distill/dataset/
+distill/*.zip
+distill/__pycache__/
