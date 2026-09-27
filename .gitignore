@@ -30,3 +30,4 @@ distill/__pycache__/
 distill/qwen2vl-distill/
 distill/venv-train/
 venv-train/
+distill/predict_out/

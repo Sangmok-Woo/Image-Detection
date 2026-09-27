@@ -138,3 +138,29 @@ pull이 덜 돼 1차는 구모델(CIFAKE)로 만들었다. 두 모델의 히트�
 - RTX 4060 Ti 8GB 실측 피크: 392px 7.95GB / 336px 7.46GB / 280px 7.05GB. 해상도를 낮춰도
   0.9GB밖에 안 준다 — 주범은 어휘 15.2만 크기의 로짓 텐서다. 다른 앱이 VRAM을 쓰면 공유 메모리로
   스필해 43초/it가 113초/it까지 느려진다. 학습 중에는 GPU를 쓰는 앱을 띄우지 말 것.
+
+## 추론 — 이미지 한 장 넣고 평가문 받기
+```
+venv-train\Scripts\python.exe distill\predict.py <이미지> [<이미지> ...]
+```
+MobileViT 판정 + Grad-CAM + 크롭을 만들고, 증류된 Qwen2-VL이 한국어 평가문을 쓴다.
+학습 때(`export_dataset.py`)와 **글자 하나까지 같은 프롬프트**를 쓰려고 `user_text`를 거기서
+그대로 가져다 쓴다. 전처리도 `build_samples.py`의 함수를 재사용한다 — 다르면 학생이 못 보던
+분포가 들어간다.
+
+TensorFlow(`venv`)와 torch(`venv-train`)는 numpy 버전이 달라 한 환경에 못 합친다. 그래서
+`predict.py`가 MobileViT 단계(`predict_prepare.py`)를 subprocess로 부른다. 경로가 다르면
+`--tf-python` 으로 지정한다.
+
+| 옵션 | 뜻 |
+|---|---|
+| `--adapter` | LoRA 어댑터 (기본 `distill/qwen2vl-distill/final`) |
+| `--json` | 결과를 JSONL로. 판정·확신·히트맵 평가를 파싱해 함께 넣는다 |
+| `--out` | 중간 산출물 폴더 (기본 `distill/predict_out/<파일명>`) |
+| `--panel` | 교사용 3칸 패널도 남긴다 |
+| `--side` | 이미지 한 변(px). VRAM이 모자라면 낮춘다 |
+
+여러 장을 주면 MobileViT를 먼저 몰아 돌리고 Qwen을 한 번만 올린다.
+
+**한계**: 2B 모델이라 없는 것을 지어내는 경우가 있다. 형식(장면·판정·근거·히트맵·판단과정·설명)은
+안정적이지만 세부 묘사는 검증이 필요하다.
