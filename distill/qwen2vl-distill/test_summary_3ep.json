@@ -1,0 +1,7 @@
+{
+  "n": 100,
+  "format_ok": 0.99,
+  "student_acc": 0.78,
+  "teacher_acc": 0.85,
+  "mobilevit_acc": 0.67
+}

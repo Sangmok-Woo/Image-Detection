@@ -1,0 +1,104 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|██████████| 2/2 [00:00<00:00, 127.99it/s]
+Loading weights:   0%|          | 0/729 [00:00<?, ?it/s]Loading weights:   0%|          | 1/729 [00:00<04:04,  2.97it/s]Loading weights:   1%|          | 4/729 [00:00<01:05, 11.01it/s]Loading weights:   3%|▎         | 23/729 [00:00<00:10, 64.34it/s]Loading weights:   5%|▌         | 40/729 [00:00<00:07, 95.75it/s]Loading weights:   9%|▊         | 63/729 [00:00<00:05, 131.68it/s]Loading weights:  11%|█         | 79/729 [00:00<00:04, 135.53it/s]Loading weights:  14%|█▎        | 100/729 [00:00<00:04, 148.90it/s]Loading weights:  16%|█▋        | 119/729 [00:01<00:03, 159.77it/s]Loading weights:  19%|█▊        | 136/729 [00:01<00:03, 162.32it/s]Loading weights:  22%|██▏       | 159/729 [00:01<00:03, 169.64it/s]Loading weights:  24%|██▍       | 177/729 [00:01<00:03, 164.13it/s]Loading weights:  27%|██▋       | 196/729 [00:01<00:03, 170.23it/s]Loading weights:  30%|███       | 219/729 [00:01<00:02, 179.41it/s]Loading weights:  33%|███▎      | 238/729 [00:01<00:02, 178.60it/s]Loading weights:  35%|███▌      | 256/729 [00:01<00:02, 172.41it/s]Loading weights:  38%|███▊      | 277/729 [00:01<00:02, 177.23it/s]Loading weights:  40%|████      | 295/729 [00:02<00:02, 166.25it/s]Loading weights:  43%|████▎     | 315/729 [00:02<00:02, 174.77it/s]Loading weights:  46%|████▌     | 333/729 [00:02<00:02, 175.79it/s]Loading weights:  51%|█████     | 370/729 [00:02<00:01, 230.60it/s]Loading weights:  57%|█████▋    | 414/729 [00:02<00:01, 290.20it/s]Loading weights:  62%|██████▏   | 452/729 [00:02<00:00, 313.97it/s]Loading weights:  69%|██████▊   | 500/729 [00:02<00:00, 349.00it/s]Loading weights:  74%|███████▍  | 538/729 [00:02<00:00, 356.36it/s]Loading weights:  79%|███████▉  | 575/729 [00:02<00:00, 359.40it/s]Loading weights:  85%|████████▍ | 618/729 [00:03<00:00, 379.51it/s]Loading weights:  90%|█████████ | 657/729 [00:03<00:00, 381.46it/s]Loading weights:  95%|█████████▌| 696/729 [00:03<00:00, 383.17it/s]Loading weights: 100%|██████████| 729/729 [00:03<00:00, 218.27it/s]
+tg0010 REAL REAL
+tg0026 REAL AI
+tg0029 REAL REAL
+tg0031 REAL REAL
+tg0032 REAL REAL
+tg0057 AI REAL
+tg0060 AI AI
+tg0078 AI AI
+tg0092 REAL REAL
+tg0095 AI REAL
+tg0097 REAL REAL
+tg0099 REAL REAL
+tg0102 AI AI
+tg0103 REAL REAL
+tg0110 REAL REAL
+tg0114 AI AI
+tg0132 AI AI
+tg0135 REAL REAL
+tg0147 AI AI
+tg0151 REAL AI
+tg0153 REAL REAL
+tg0168 AI AI
+tg0191 REAL AI
+tg0192 AI REAL
+tg0211 REAL AI
+tg0212 AI AI
+tg0215 REAL REAL
+tg0217 REAL REAL
+tg0219 REAL REAL
+tg0226 REAL REAL
+tg0241 REAL REAL
+tg0265 REAL REAL
+tg0268 REAL REAL
+tg0307 AI AI
+tg0313 AI REAL
+tg0314 AI REAL
+tg0321 AI AI
+tg0325 REAL REAL
+tg0327 REAL None
+tg0347 REAL REAL
+tg0363 REAL REAL
+tg0385 AI AI
+tg0388 AI AI
+tg0396 AI AI
+tg0406 REAL REAL
+tg0409 REAL REAL
+tg0410 AI AI
+tg0417 AI REAL
+tg0425 AI AI
+tg0432 AI REAL
+tg0434 AI REAL
+tg0435 AI AI
+tg0445 AI REAL
+tg0451 REAL REAL
+tg0476 AI AI
+tg0487 AI REAL
+tg0489 AI AI
+tg0501 REAL REAL
+tg0507 AI AI
+tg0515 AI AI
+tg0528 AI AI
+tg0539 AI AI
+tg0547 REAL REAL
+tg0566 AI AI
+tg0571 REAL REAL
+tg0587 AI AI
+tg0594 REAL REAL
+tg0595 REAL REAL
+tg0605 REAL REAL
+tg0614 AI AI
+tg0617 AI AI
+tg0620 AI REAL
+tg0625 AI AI
+tg0640 AI AI
+tg0644 AI AI
+tg0652 REAL REAL
+tg0661 REAL REAL
+tg0663 AI AI
+tg0685 REAL REAL
+tg0708 REAL REAL
+tg0710 AI AI
+tg0711 REAL REAL
+tg0722 AI REAL
+tg0728 REAL REAL
+tg0736 AI AI
+tg0746 REAL REAL
+tg0750 REAL REAL
+tg0766 AI REAL
+tg0768 REAL REAL
+tg0771 REAL AI
+tg0813 REAL REAL
+tg0815 AI AI
+tg0817 REAL AI
+tg0832 AI REAL
+tg0842 AI AI
+tg0883 AI REAL
+tg0889 REAL REAL
+tg0897 AI AI
+tg0910 REAL REAL
+tg0976 REAL REAL
+{'n': 100, 'format_ok': 0.99, 'student_acc': 0.78, 'teacher_acc': 0.85, 'mobilevit_acc': 0.67}
