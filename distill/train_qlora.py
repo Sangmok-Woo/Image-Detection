@@ -100,7 +100,7 @@ def train(args):
         remove_unused_columns=False, dataloader_num_workers=args.workers, report_to='none')
     trainer = Trainer(model=model, args=targs, data_collator=Collator(processor, args.data),
                       train_dataset=train_rows, eval_dataset=read_jsonl(f'{args.data}/val.jsonl'))
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume)
     trainer.save_model(f'{args.out}/final')
     processor.save_pretrained(f'{args.out}/final')
 
@@ -149,6 +149,8 @@ if __name__ == '__main__':
     ap.add_argument('--lr', type=float, default=2e-4)
     ap.add_argument('--rank', type=int, default=16)
     ap.add_argument('--eval-only', action='store_true')
+    ap.add_argument('--resume', nargs='?', const=True, default=None,
+                    help='체크포인트에서 이어서 학습한다. 경로를 주거나, 빈 값이면 최신 것')
     ap.add_argument('--side', type=int, default=SIDE,
                     help='이미지 한 변(px). 392=장당 196토큰. 낮추면 VRAM이 준다')
     ap.add_argument('--workers', type=int, default=0 if os.name == 'nt' else 2,
