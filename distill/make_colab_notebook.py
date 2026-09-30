@@ -37,7 +37,7 @@ cells = [
 !pip install -q -U "transformers>=4.49" peft accelerate
 # Colab에 깔린 구버전 torchao 때문에 PEFT가 어댑터를 붙이다 죽는다. 서버는 torchao를 쓰지 않는다.
 !pip uninstall -y -q torchao
-# 저장소가 비공개라 clone 하지 않는다. 서버에 필요한 파일 3개는 아래 셀에 들어 있다.
+# clone 하지 않는다. 서버에 필요한 파일 3개는 아래 셀에 들어 있다.
 !mkdir -p /content/repo/distill
 %cd /content/repo
 '''),

@@ -29,8 +29,8 @@
 ### 1. 저장소
 
 ```
-git clone -b feature/claude-image-analysis https://github.com/Sangmok-Woo/claude-image-detection.git
-cd claude-image-detection
+git clone https://github.com/Sangmok-Woo/Image-Detection.git
+cd Image-Detection
 ```
 
 `MobileViT2_Model.h5`(62MB)는 Git LFS다. `git lfs install`이 안 돼 있으면 포인터 파일만
@@ -102,7 +102,7 @@ Colab으로 돌릴 때:
 
 알아둘 것:
 
-- 저장소가 비공개라 Colab에서 clone이 안 된다. 그래서 노트북이 서버에 필요한 파일 3개를 본문에 싣고
+- Colab에서 clone 없이 돌도록(비공개 사본에서도 되도록) 노트북이 서버에 필요한 파일 3개를 본문에 싣고
   있다. **서버 코드를 고치면 `distill/make_colab_notebook.py`로 노트북을 다시 만든다**
 - 58초는 LoRA를 베이스에 병합(`merge_and_unload`)한 값이다. 병합 전에는 115초였고, bf16과 fp16의
   차이는 없었다

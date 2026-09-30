@@ -84,8 +84,8 @@ Windows, Python 3.11 기준입니다. 모델 파일은 Git LFS로 받습니다.
 
 ```bash
 git lfs install
-git clone -b feature/claude-image-analysis https://github.com/Sangmok-Woo/claude-image-detection.git
-cd claude-image-detection
+git clone https://github.com/Sangmok-Woo/Image-Detection.git
+cd Image-Detection
 ```
 
 **1. 앱 환경 (MobileViT)**
