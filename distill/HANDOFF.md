@@ -72,6 +72,45 @@ CPU로도 돌긴 하지만 한 장에 수 분 걸린다.
 
 이미지 → MobileViT 판정 + Grad-CAM → 학생이 한국어 평가문. 이게 되면 옮기기 성공이다.
 
+## 웹 서비스로 띄우기 (2026-09-30)
+
+Streamlit 앱이 MobileViT 판정·히트맵을 만들고, 해설은 별도 추론 서버(`distill/vlm_server.py`)에서
+글자 단위로 받아 온다. Qwen2-VL 베이스 모델(4.4GB)은 저장소에 없고 처음 실행할 때 Hugging Face에서
+받는다. 어댑터는 `distill/qwen2vl-distill/final-3ep`(LFS)을 쓴다. `final`(5에포크)은 LFS 서버에 실제
+파일이 없어 포인터만 있으므로, 서버가 크기를 보고 건너뛴다. test 정확도는 둘 다 78%로 같다.
+
+```
+run.cmd          # 추론 서버(8502) + 앱(8501)을 같이 띄운다
+```
+
+| 서버 위치 | 해설 한 건 | 방법 |
+|---|---|---|
+| 같은 PC, GPU 있음 | 재보지 않음 | `run.cmd` 그대로. VRAM 12GB 미만이면 4bit로 올린다 |
+| 같은 PC, CPU | 약 7분 30초 | `run.cmd` 그대로. torch는 CPU 빌드면 된다 |
+| Colab T4 | **약 58초** (첫 글자 2.4초) | 아래 |
+
+Colab으로 돌릴 때:
+
+1. `distill/colab_vlm_server.ipynb`를 Colab에 올리고 런타임을 T4 GPU로 둔다
+2. 왼쪽 파일 패널로 어댑터를 `/content`에 올린다. `distill/qwen2vl-distill/final-3ep` 폴더를 통째로
+   묶어 `adapter-3ep.zip`이라는 이름으로 올리면 된다 (zip 안 최상위가 `final-3ep/`여야 한다)
+3. 모두 실행 → 5번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트의 `vlm_url.txt`
+   한 줄에 적거나 앱 왼쪽 사이드바에 붙여 넣는다
+
+`vlm_url.txt`가 있으면 `run.cmd`는 로컬 서버를 띄우지 않는다. 로컬로 돌리려면 그 파일을 지운다.
+무료 Colab은 한동안 쓰지 않으면 세션이 끝나고 주소도 매번 바뀐다.
+
+알아둘 것:
+
+- 저장소가 비공개라 Colab에서 clone이 안 된다. 그래서 노트북이 서버에 필요한 파일 3개를 본문에 싣고
+  있다. **서버 코드를 고치면 `distill/make_colab_notebook.py`로 노트북을 다시 만든다**
+- 58초는 LoRA를 베이스에 병합(`merge_and_unload`)한 값이다. 병합 전에는 115초였고, bf16과 fp16의
+  차이는 없었다
+- Colab에 깔린 구버전 torchao가 PEFT를 죽인다. 노트북이 먼저 제거한다
+- 학습은 336px였다. `predict.py` 기본값은 392px라 어긋나 있고, 서버는 336으로 고정했다
+
+보고서 8장의 그림과 docx 삽입 스크립트는 `distill/report/`에 있다.
+
 ## 다시 만들어야 할 때
 
 ### 이미지 1000장 (`work/`)
