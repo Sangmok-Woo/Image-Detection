@@ -30,9 +30,13 @@ distill/__pycache__/
 # 학습 산출물: 최적 어댑터와 채점 결과만 남기고 체크포인트는 제외한다
 distill/qwen2vl-distill/*
 !distill/qwen2vl-distill/final/
+!distill/qwen2vl-distill/final-3ep/
 !distill/qwen2vl-distill/test_summary*.json
 !distill/qwen2vl-distill/test_predictions*.jsonl
 !distill/qwen2vl-distill/*.log
 distill/venv-train/
 venv-train/
 distill/predict_out/
+
+# Colab 터널 주소 (켤 때마다 바뀐다)
+vlm_url.txt

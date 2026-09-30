@@ -19,9 +19,8 @@ import tf_keras as keras
 sys.modules['keras'] = keras
 sys.modules['tensorflow.keras'] = keras
 
-from model_utils import load_mobilevit_model, pre_process_img_mobilevit
-from analysis_utils import get_vlm_explanation, generate_gradcam_overlay
-from tf_keras.preprocessing.image import load_img, img_to_array
+from model_utils import load_mobilevit_model
+import vlm_client
 
 st.set_page_config(
     page_title="AI vs REAL Detector",
@@ -38,6 +37,17 @@ def load_css(path):
 load_css("./styles/style.css")
 
 mobilevit_model = load_mobilevit_model()
+
+# ── VLM 서버 주소 (Colab 터널 주소는 켤 때마다 바뀌므로 화면에서 바꿀 수 있게 둔다) ──
+with st.sidebar:
+    st.markdown("**VLM 서버**")
+    vlm_url = st.text_input("주소", value=vlm_client.default_url(),
+                            help="로컬은 http://127.0.0.1:8502, Colab은 trycloudflare.com 주소")
+    vlm_info = vlm_client.health(vlm_url)
+    if vlm_info is None:
+        st.caption("연결 안 됨")
+    else:
+        st.caption(f"{vlm_info.get('device')} · 어댑터 {vlm_info.get('adapter')}")
 
 # ── Header ──────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -66,11 +76,10 @@ if user_image is not None:
     if st.session_state.get("file_key") != file_key:
         with st.spinner("Analyzing…"):
             try:
-                preds = pre_process_img_mobilevit(io.BytesIO(image_bytes), mobilevit_model)
-                prob_val = float(preds[0][0])
-                
-                # Grad-Cam 히트맵 생성 및 Base64 인코딩 진행
-                heatmap_img = generate_gradcam_overlay(image_bytes, mobilevit_model)
+                # 학생 VLM이 학습 때 본 것과 같은 전처리로 판정·히트맵·크롭을 만든다
+                vlm_dir, vlm_meta, heatmap_img = vlm_client.prepare(
+                    image_bytes, mobilevit_model, f"{abs(hash(file_key)):x}")
+                prob_val = vlm_meta["mobilevit_prob_real"]
                 img_buffer = io.BytesIO()
                 heatmap_img.save(img_buffer, format="PNG")
                 heatmap_b64 = base64.b64encode(img_buffer.getvalue()).decode()
@@ -80,8 +89,9 @@ if user_image is not None:
                     "prob": prob_val,
                     "image_b64": image_b64,
                     "heatmap_b64": heatmap_b64,
-                    "image_bytes": image_bytes,
-                    "claude_explanation": None,
+                    "vlm_dir": vlm_dir,
+                    "vlm_meta": vlm_meta,
+                    "vlm_text": None,
                 })
             except Exception as e:
                 st.session_state.pop("file_key", None)
@@ -143,23 +153,25 @@ if user_image is not None:
                 )
                 
             with exp_right:
-                st.markdown('<p class="section-label">📝 AI Reasoning</p>', unsafe_allow_html=True)
-                if "claude_explanation" not in st.session_state:
-                    with st.spinner("Claude가 이미지와 Grad-CAM을 분석하고 있습니다..."):
-                        st.session_state["claude_explanation"] = get_vlm_explanation(
-                            prob,
-                            result_word,
-                            image_base64=image_b64,
-                            heatmap_base64=heatmap_b64,
-                            image_media_type=user_image.type
-                        )
-
-                explanation = st.session_state["claude_explanation"]
-
-                st.markdown(
-                    f'<div class="reasoning-box">{explanation}</div>',
-                    unsafe_allow_html=True
-                )
+                st.markdown('<p class="section-label">📝 VLM Reasoning (Qwen2-VL-2B + QLoRA)</p>', unsafe_allow_html=True)
+                if st.session_state["vlm_text"]:
+                    st.markdown(st.session_state["vlm_text"])
+                else:
+                    info = vlm_info
+                    if info is None:
+                        st.warning(f"VLM 서버({vlm_url})에 연결할 수 없습니다. "
+                                   "왼쪽 사이드바(>)에서 주소를 확인하세요.")
+                    elif not info.get("ready"):
+                        st.info("VLM 모델을 올리는 중입니다. 잠시 후 새로고침하세요.")
+                    else:
+                        st.caption(f"{info['device']} · 어댑터 {info['adapter']}"
+                                   + (" · CPU면 몇 분 걸립니다" if info['device'].startswith('cpu') else ""))
+                        try:
+                            text = st.write_stream(vlm_client.stream(
+                                st.session_state["vlm_dir"], st.session_state["vlm_meta"], vlm_url))
+                            st.session_state["vlm_text"] = text
+                        except Exception as e:
+                            st.error(f"VLM 호출 실패: {e}")
 
 else:
     st.session_state.pop("file_key", None)
@@ -170,6 +182,6 @@ else:
 
 # ── Footer ───────────────────────────────────────────────────────────────────────
 st.markdown(
-    '<div class="footer">MobileViT v2 &nbsp;·&nbsp; Threshold 0.50</div>',
+    '<div class="footer">MobileViT v2 &nbsp;·&nbsp; Qwen2-VL-2B QLoRA &nbsp;·&nbsp; Threshold 0.50</div>',
     unsafe_allow_html=True
 )
