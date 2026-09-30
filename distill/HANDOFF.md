@@ -76,8 +76,9 @@ CPU로도 돌긴 하지만 한 장에 수 분 걸린다.
 
 Streamlit 앱이 MobileViT 판정·히트맵을 만들고, 해설은 별도 추론 서버(`distill/vlm_server.py`)에서
 글자 단위로 받아 온다. Qwen2-VL 베이스 모델(4.4GB)은 저장소에 없고 처음 실행할 때 Hugging Face에서
-받는다. 어댑터는 `distill/qwen2vl-distill/final-3ep`(LFS)을 쓴다. `final`(5에포크)은 LFS 서버에 실제
-파일이 없어 포인터만 있으므로, 서버가 크기를 보고 건너뛴다. test 정확도는 둘 다 78%로 같다.
+받는다. 어댑터는 `distill/qwen2vl-distill/final-3ep`(LFS)을 쓴다. `final`(5에포크)의 가중치는 LFS
+서버에 올라간 적이 없어 저장소에서 뺐고 설정 파일만 남아 있다. 학습한 PC의 `final/adapter_model.safetensors`를
+제자리에 두면 서버가 그것을 먼저 쓴다. test 정확도는 둘 다 78%로 같다.
 
 ```
 run.cmd          # 추론 서버(8502) + 앱(8501)을 같이 띄운다
