@@ -129,13 +129,20 @@ Qwen2-VL 베이스 모델(4.4GB)은 저장소에 없고, 처음 실행할 때 Hu
 | Colab T4, 어댑터 미병합 | 5.5초 | 115초 |
 | **Colab T4, 어댑터 병합** | **2.4초** | **58초** |
 
-1. [distill/colab_vlm_server.ipynb](distill/colab_vlm_server.ipynb)를 Colab에 올리고 런타임을 T4 GPU로 둡니다
-2. `distill/qwen2vl-distill/final-3ep` 폴더를 `adapter-3ep.zip`으로 묶어 Colab 파일 패널로 `/content`에 올립니다
-3. 모두 실행한 뒤, 5번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트의
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sangmok-Woo/Image-Detection/blob/main/distill/colab_vlm_server.ipynb)
+
+1. 위 버튼으로 [distill/colab_vlm_server.ipynb](distill/colab_vlm_server.ipynb)를 Colab에서 엽니다 (런타임은 T4 GPU로 저장돼 있습니다)
+2. **런타임 → 모두 실행**. 올릴 파일은 없습니다. 서버 코드와 어댑터는 이 저장소 main에서 받습니다
+3. 1번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트의
    `vlm_url.txt`에 한 줄로 적습니다 (앱 왼쪽 사이드바에 붙여 넣어도 됩니다)
 4. `run.cmd`를 실행합니다. `vlm_url.txt`가 있으면 로컬 서버는 뜨지 않습니다
 
+새 Colab VM에서 실행을 누르고 주소가 나오기까지 약 72초입니다 (2026-10-15 실측).
+모델 다운로드와 서버 기동을 겹쳐 돌리기 때문입니다.
+
 무료 Colab은 한동안 쓰지 않으면 세션이 끝나고 주소도 매번 바뀝니다.
+`distill/vlm_server.py`를 고쳤으면 main에 올린 뒤 실행해야 반영됩니다.
+노트북은 `python distill/make_colab_notebook.py`로 다시 만듭니다.
 
 ## 저장소 구성
 
