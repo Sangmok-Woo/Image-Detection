@@ -11,18 +11,22 @@ import json
 import os
 import sys
 import tempfile
+import threading
 
 import numpy as np
 import requests
+
+# 서버 상태 확인과 설명 생성 요청에서 HTTP 연결을 재사용하기 위한 세션.
+_SESSION = requests.Session()
+_SESSION_LOCK = threading.Lock()
+
 import tensorflow as tf
 from PIL import Image
-
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'distill'))
 
 from build_samples import SIZE, crop_box, gradcam, make_overlay, standardize
 
 URL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vlm_url.txt')
-
 
 def default_url():
     """서버 주소. 환경변수 VLM_URL > vlm_url.txt > 로컬 순으로 본다.
@@ -40,7 +44,6 @@ def default_url():
 VLM_URL = default_url()
 OUT_ROOT = os.path.join(tempfile.gettempdir(), 'image-detection-vlm')
 
-
 def _last_conv(model):
     # build_samples.last_conv_name은 tf.keras 클래스로 비교하는데, 앱은 tf_keras로 모델을
     # 올려 isinstance가 빗나간다. 클래스 이름으로 찾는다.
@@ -55,18 +58,15 @@ def prepare(image_bytes, model, key):
     """판정 + 히트맵 + 크롭. (폴더, meta, 오버레이 이미지)를 돌려준다."""
     out = os.path.join(OUT_ROOT, key)
     os.makedirs(out, exist_ok=True)
-
     img = standardize(image_bytes)
     x = np.asarray(img.resize((224, 224), Image.NEAREST), np.float32)[None] / 255.0
     prob = float(model(x, training=False).numpy()[0, 0])  # 1에 가까울수록 실제 사진
     pred_real = prob >= 0.5
-
     grad_model = type(model)(model.input, [model.get_layer(_last_conv(model)).output, model.output])
     cam = gradcam(grad_model, tf.constant(x), pred_real)
     overlay, cam_big = make_overlay(img, cam)
     box = crop_box(cam_big)
     crop = img.crop(box).resize((SIZE, SIZE), Image.BICUBIC)
-
     img.save(f'{out}/orig.jpg', quality=95)
     overlay.save(f'{out}/cam.jpg', quality=90)
     crop.save(f'{out}/crop.jpg', quality=90)
@@ -81,19 +81,48 @@ def prepare(image_bytes, model, key):
 def health(url=VLM_URL):
     """서버 상태. 안 떠 있으면 None."""
     try:
-        return requests.get(f'{url.rstrip("/")}/health', timeout=5).json()
+        with _SESSION_LOCK:
+            response = _SESSION.get(f'{url.rstrip("/")}/health', timeout=5)
+        return response.json()
     except (requests.RequestException, ValueError):
         return None
 
 
 def stream(out, meta, url=VLM_URL):
-    """생성문 조각을 나오는 대로 내놓는다."""
-    images = {}
-    for k in ('orig', 'cam', 'crop'):
-        with open(f'{out}/{k}.jpg', 'rb') as f:
-            images[k] = base64.b64encode(f.read()).decode()
-    with requests.post(f'{url.rstrip("/")}/generate', json={'images': images, 'meta': meta},
-                       stream=True, timeout=(10, 900)) as r:
+    """JPEG 이미지 3장을 바이너리 multipart로 전송하고 생성되는 설명을 순서대로 내보낸다.
+    HTTP 연결은 기존 세션을 재사용한다.
+    VLM_TRANSPORT=json 으로 설정하면 기존의 json 전송 방식을 재사용 할 수 있다.
+    """
+    transport = os.environ.get('VLM_TRANSPORT', 'multipart').lower()
+    endpoint = f'{url.rstrip("/")}/generate'
+    if transport not in ('multipart', 'json'):
+        raise ValueError('VLM_TRANSPORT must be multipart or json')
+
+    if transport == 'json':
+        images = {}
+        for k in ('orig', 'cam', 'crop'):
+            with open(f'{out}/{k}.jpg', 'rb') as f:
+                images[k] = base64.b64encode(f.read()).decode('ascii')
+        kwargs = {'json': {'images': images, 'meta': meta}}
+    else:
+        kwargs = {'data': {'meta': json.dumps(meta, ensure_ascii=False)}}
+
+    if transport == 'json':
+        with _SESSION_LOCK:
+            response = _SESSION.post(endpoint, stream=True, timeout=(10, 900), **kwargs)
+    else:
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            files = {
+                k: (f'{k}.jpg', stack.enter_context(open(f'{out}/{k}.jpg', 'rb')), 'image/jpeg')
+                for k in ('orig', 'cam', 'crop')
+            }
+            # 요청을 보내는 동안 세션 접근을 잠그고, 긴 응답 스트리밍 중에는 잠그지 않는다.
+            with _SESSION_LOCK:
+                response = _SESSION.post(endpoint, files=files, stream=True,
+                                         timeout=(10, 900), **kwargs)
+
+    with response as r:
         r.raise_for_status()
         r.encoding = 'utf-8'
         for piece in r.iter_content(chunk_size=None, decode_unicode=True):
