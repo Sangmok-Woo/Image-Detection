@@ -2,24 +2,28 @@
 import json
 import os
 import sys
+from pathlib import Path
 
-repo = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+repo = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent
 
-
-def md(s):
-    return {'cell_type': 'markdown', 'metadata': {}, 'source': s.strip('\n').splitlines(True)}
-
-
-def code(s):
-    return {'cell_type': 'code', 'metadata': {}, 'execution_count': None, 'outputs': [],
-            'source': s.strip('\n').splitlines(True)}
+def md(source, cell_id):
+    return {
+        'cell_type': 'markdown', 'id': cell_id, 'metadata': {},
+        'source': source.strip('\n').splitlines(keepends=True),
+    }
 
 
-RAW = 'https://raw.githubusercontent.com/Sangmok-Woo/Image-Detection/main'
-LFS = 'https://media.githubusercontent.com/media/Sangmok-Woo/Image-Detection/main'
+def code(source, cell_id):
+    return {
+        'cell_type': 'code', 'id': cell_id, 'metadata': {},
+        'execution_count': None, 'outputs': [],
+        'source': source.strip('\n').splitlines(keepends=True),
+    }
 
+
+# 별도 템플릿 없이 노트북을 다시 생성할 수 있도록 셀 내용을 이 파일에 둔다.
 cells = [
-    md('''
+    md(r"""
 # Qwen2-VL 증류 학생 — Colab GPU 서버
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sangmok-Woo/Image-Detection/blob/main/distill/colab_vlm_server.ipynb)
@@ -27,14 +31,18 @@ cells = [
 노트북 PC의 Streamlit 앱(MobileViT 판정·히트맵)은 그대로 두고, **해설을 쓰는 Qwen2-VL만 Colab GPU에서** 돌린다.
 
 1. 런타임 유형이 **T4 GPU** 인지 확인한다 (이 노트북은 T4로 저장돼 있다)
-2. **런타임 → 모두 실행** (Ctrl+F9). 올릴 파일은 없다
-3. 1번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트 `vlm_url.txt` 에 적거나 앱 사이드바에 붙여 넣는다
+2. **런타임 → 모두 실행** (Ctrl+F9). 별도의 어댑터 파일 업로드는 필요 없다
+3. 1번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트 `vlm_url.txt`에 적거나 앱 사이드바에 붙여 넣는다
 
-서버 코드와 어댑터는 공개 저장소 main에서 받는다. 서버 코드를 고쳤으면 main에 올린 뒤 실행할 것.
-무료 Colab은 한동안 아무것도 안 하면 끊긴다. 발표 직전에 켜고, 2번 셀로 한 번 워밍업해 둘 것.
-'''),
-    md('## 1. 준비 + 서버 + 터널\n모델 다운로드와 서버 기동을 겹쳐 돌린다. 올릴 파일은 없다.'),
-    code('''
+서버 코드와 어댑터는 공개 저장소 `main`에서 다운로드한다. **이번 Binary Multipart 서버 수정 파일을 main에 먼저 반영**한 뒤 실행할 것.
+Colab 서버는 **기존 Base64 JSON과 Binary Multipart 둘 다 수신**하고, 2번 셀의 워밍업은 **Binary Multipart + requests.Session**으로 실행한다.
+무료 Colab은 사용하지 않으면 런타임이 끊길 수 있다. 발표 직전에 켜고 2번 셀로 워밍업해 둘 것.
+""", '8a16b51d'),
+    md(r"""
+## 1. 준비 + 서버 + 터널
+모델 다운로드와 서버 기동을 겹쳐 돌린다. 올릴 파일은 없다.
+""", 'fe50d4ec'),
+    code(r"""
 import hashlib, os, re, subprocess, time
 t_start = time.time()
 REPO, D = '/content/repo', '/content/repo/distill'
@@ -47,11 +55,11 @@ def bg(cmd, log):
     return subprocess.Popen(f'{cmd} > /content/{log}.log 2>&1', shell=True)
 
 # 모델(4.2GB)은 바로 받기 시작한다. 서버가 torch를 처음 import하는 동안(새 VM에서 1분 넘게) 같이 받는다
-RAW = \'''' + RAW + '''\'
-LFS = \'''' + LFS + '''\'  # LFS 파일(어댑터 가중치)은 raw 주소로 받으면 포인터만 온다
+RAW = 'https://raw.githubusercontent.com/Sangmok-Woo/Image-Detection/main'
+LFS = 'https://media.githubusercontent.com/media/Sangmok-Woo/Image-Detection/main'  # LFS 파일(어댑터 가중치)은 raw 주소로 받으면 포인터만 온다
 wget = lambda pairs: ' && '.join(f'wget -q -O {dst} {src}' for dst, src in pairs)
 jobs = {
-    'model': bg("python -c \\"from huggingface_hub import snapshot_download as s; s('Qwen/Qwen2-VL-2B-Instruct')\\"", 'model'),
+    'model': bg("python -c \"from huggingface_hub import snapshot_download as s; s('Qwen/Qwen2-VL-2B-Instruct')\"", 'model'),
     'adapter': bg(wget([(f'{ADAPTER}/adapter_model.safetensors', f'{LFS}/distill/qwen2vl-distill/final-3ep/adapter_model.safetensors'),
                         (f'{ADAPTER}/adapter_config.json', f'{RAW}/distill/qwen2vl-distill/final-3ep/adapter_config.json')]), 'adapter'),
     'code': bg(wget([(f'{D}/{f}', f'{RAW}/distill/{f}') for f in ('vlm_server.py', 'export_dataset.py', 'train_qlora.py')]), 'code'),
@@ -108,15 +116,22 @@ for _ in range(240):
     except Exception:
         pass
     time.sleep(2)
-print(f'서버 준비: {time.time() - t_start:.0f}초', requests.get('http://127.0.0.1:8502/health').json())
+health_local = requests.get('http://127.0.0.1:8502/health', timeout=10).json()
+print(f'서버 준비: {time.time() - t_start:.0f}초', health_local)
+# 서버 소스가 예전 버전이면 조용히 실패하지 않도록 확인한다.
+assert 'multipart' in health_local.get('transports', []), (
+    '서버가 Multipart를 지원하지 않습니다. 최적화된 distill/vlm_server.py를 GitHub main에 반영한 뒤 런타임을 다시 실행하세요.'
+)
 
 URL = None
 for _ in range(60):
-    m = re.search(r'https://[a-z0-9-]+\\.trycloudflare\\.com', open('/content/tunnel.log').read())
+    m = re.search(r'https://[a-z0-9-]+\.trycloudflare\.com', open('/content/tunnel.log').read())
     if m:
         URL = m.group(0); break
     time.sleep(1)
-# 주소가 나온 직후엔 DNS가 아직 안 퍼져서 바로 요청하면 실패한다 (2번 셀이 그렇게 죽었다)
+if not URL:
+    raise RuntimeError('Cloudflare 터널 주소 발급 실패. /content/tunnel.log를 확인하세요.')
+# 주소가 나온 직후엔 DNS가 아직 안 퍼져서 바로 요청하면 실패한다
 for _ in range(60):
     try:
         if requests.get(f'{URL}/health', timeout=5).ok:
@@ -124,36 +139,98 @@ for _ in range(60):
     except Exception:
         pass
     time.sleep(2)
-print(f'\\n전체 {time.time() - t_start:.0f}초. 앱에 넣을 주소:\\n', URL)
-'''),
-    md('## 2. 워밍업 + 속도 측정\n회색 더미 이미지로 한 번 생성해 본다. 첫 요청은 CUDA 초기화 때문에 조금 더 느리다.'),
-    code('''
-import base64, io
+print(f'\n전체 {time.time() - t_start:.0f}초. 앱에 넣을 주소:\n', URL)
+""", '8ce7fd52'),
+    md(r"""
+## 2. 워밍업 + 속도 측정 (Binary Multipart)
+회색 더미 이미지 3장을 바이너리로 전송한다. 첫 요청은 CUDA 초기화 때문에 조금 더 느릴 수 있다.
+""", 'b4f0c520'),
+    code(r"""
+# 두 번째 셀: 바이너리 이미지 3장 + meta JSON을 multipart/form-data로 전송한다.
+import io
+import json
+import time
+import requests
 from PIL import Image
-def b64(color):
-    buf = io.BytesIO(); Image.new('RGB', (384, 384), color).save(buf, 'JPEG'); return base64.b64encode(buf.getvalue()).decode()
-req = {'images': {'orig': b64((128, 128, 128)), 'cam': b64((90, 90, 200)), 'crop': b64((140, 140, 140))},
-       'meta': {'mobilevit_pred': 'AI', 'mobilevit_prob_real': 0.3, 'crop_box': [0, 0, 128, 128]}}
-t0 = time.time(); first = None; text = ''
-with requests.post(f'{URL}/generate', json=req, stream=True, timeout=600) as r:
-    r.encoding = 'utf-8'
-    for p in r.iter_content(chunk_size=None, decode_unicode=True):
-        first = first or time.time() - t0; text += p
+
+
+def make_jpeg(color):
+    buf = io.BytesIO()
+    Image.new('RGB', (384, 384), color).save(buf, format='JPEG')
+    return buf.getvalue()
+
+
+images = {
+    'orig': make_jpeg((128, 128, 128)),
+    'cam': make_jpeg((90, 90, 200)),
+    'crop': make_jpeg((140, 140, 140)),
+}
+meta = {
+    'mobilevit_pred': 'AI',
+    'mobilevit_prob_real': 0.3,
+    'crop_box': [0, 0, 128, 128],
+}
+files = {
+    key: (f'{key}.jpg', blob, 'image/jpeg')
+    for key, blob in images.items()
+}
+
+# 워밍업 요청과 뒤이은 /health 확인에 같은 Session을 재사용한다.
+t0 = time.perf_counter()
+first_s = None
+parts = []
+with requests.Session() as session:
+    with session.post(
+        f'{URL}/generate',
+        files=files,
+        data={'meta': json.dumps(meta, ensure_ascii=False)},
+        stream=True,
+        timeout=(10, 900),
+    ) as response:
+        response.raise_for_status()
+        response.encoding = 'utf-8'
+        for part in response.iter_content(chunk_size=None, decode_unicode=True):
+            if not part:
+                continue
+            if first_s is None:
+                first_s = time.perf_counter() - t0
+            parts.append(part)
+    total_s = time.perf_counter() - t0
+    health = session.get(f'{URL}/health', timeout=10)
+    health.raise_for_status()
+    last = health.json().get('last')
+
+text = ''.join(parts)
 print(text[:300], '...')
-print(f'\\n터널 경유 — 첫 글자 {first:.1f}초, 전체 {time.time() - t0:.1f}초, {len(text)}자')
-print('서버 측정:', requests.get(f'{URL}/health').json()['last'])
-'''),
-    md('## 3. 로그 보기 (문제가 생겼을 때)'),
-    code('''
+print(f'\n터널 경유 (Binary Multipart) — 첫 텍스트 {first_s:.2f}초, 전체 {total_s:.2f}초, {len(text)}자' if first_s is not None else '텍스트가 수신되지 않았습니다.')
+print('서버 측정:', last)
+print('JPEG 전송량:', sum(map(len, images.values())), 'bytes (multipart 헤더 제외)')
+""", '366eb4d7'),
+    md(r"""
+## 3. 로그 보기 (문제가 생겼을 때)
+""", '42f248b3'),
+    code(r"""
 !tail -20 /content/server.log
 !tail -5 /content/tunnel.log
-'''),
+""", 'e1ba622c'),
 ]
 
-nb = {'cells': cells, 'metadata': {'accelerator': 'GPU', 'colab': {'provenance': [], 'gpuType': 'T4'},
-                                   'kernelspec': {'name': 'python3', 'display_name': 'Python 3'},
-                                   'language_info': {'name': 'python'}},
-      'nbformat': 4, 'nbformat_minor': 0}
-out = f'{repo}/distill/colab_vlm_server.ipynb'
-json.dump(nb, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-print(out)
+nb = {
+    'cells': cells,
+    'metadata': {
+        'accelerator': 'GPU',
+        'colab': {'gpuType': 'T4', 'provenance': []},
+        'kernelspec': {'display_name': 'Python 3', 'name': 'python3'},
+        'language_info': {'name': 'python'},
+    },
+    'nbformat': 4,
+    'nbformat_minor': 5,
+}
+
+# 별도 경로를 지정하지 않으면 이 스크립트가 들어 있는 프로젝트에 노트북을 저장한다.
+output_path = repo / 'distill' / 'colab_vlm_server.ipynb'
+output_path.parent.mkdir(parents=True, exist_ok=True)
+with output_path.open('w', encoding='utf-8') as f:
+    json.dump(nb, f, ensure_ascii=False, indent=1)
+    f.write('\n')
+print(f'Generated: {output_path}')

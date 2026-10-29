@@ -5,10 +5,10 @@ torch 환경(로컬 venv-train 또는 Colab)에서 돈다. 앱은 TensorFlow ven
 
     venv-train\\Scripts\\python.exe distill\\vlm_server.py [--port 8502] [--quant auto|4bit|none]
 
-GET  /health    {"ready": bool, "device": ..., "adapter": ..., "last": {...}}
-POST /generate  {"images": {"orig": <b64>, "cam": <b64>, "crop": <b64>}, "meta": {...}}
+GET  /health    {"ready": bool, "device": ..., "adapter": ..., "last": {...}, "transports": [...]}
+POST /generate  JSON: {"images": {"orig": <b64>, "cam": <b64>, "crop": <b64>}, "meta": {...}}
+                multipart/form-data: 이미지 필드 orig, cam, crop + JSON 형식의 meta 필드
                 → 생성문을 글자가 나오는 대로 흘려보낸다 (text/plain, chunked)
-
 이미지를 요청에 직접 싣기 때문에 서버가 다른 컴퓨터(Colab, AWS)에 있어도 된다.
 
 정밀도(--quant auto): GPU 메모리가 12GB 이상이면 양자화 없이 fp16/bf16(작은 배치에선
@@ -24,12 +24,13 @@ import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from email import policy
+from email.parser import BytesParser
 
 import torch
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from export_dataset import user_text
 from train_qlora import MODEL_ID, build_messages
 
@@ -41,9 +42,9 @@ SIDE = 336
 # 학습 데이터와 같은 순서: 원본, 히트맵, 크롭
 ORDER = ('orig', 'cam', 'crop')
 
-state = {'ready': False, 'device': None, 'adapter': None, 'last': None}
+state = {'ready': False, 'device': None, 'adapter': None, 'last': None,
+         'transports': ['json', 'multipart']}
 lock = threading.Lock()  # 한 번에 한 장만 생성한다
-
 
 def pick_adapter(explicit=None):
     for d in ([explicit] if explicit else ADAPTERS):
@@ -57,7 +58,6 @@ def pick_adapter(explicit=None):
 def load(args):
     from peft import PeftModel
     from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
-
     if torch.cuda.is_available():
         dtype = {'bf16': torch.bfloat16, 'fp16': torch.float16}.get(
             args.dtype, torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16)
@@ -75,10 +75,9 @@ def load(args):
         state['device'] = f'{name} {quant if quant == "4bit" else str(dtype).split(".")[-1]}'
     else:
         torch.set_num_threads(args.threads)
-        model = Qwen2VLForConditionalGeneration.from_pretrained(MODEL_ID, dtype=torch.bfloat16)
+        model = Qwen2VLForConditionalGeneration.fromㄴ_pretrained(MODEL_ID, dtype=torch.bfloat16)
         state['device'] = f'cpu bf16 ({args.threads} threads)'
         quant = 'none'
-
     adapter = pick_adapter(args.adapter)
     model = PeftModel.from_pretrained(model, adapter)
     if quant != '4bit':
@@ -91,9 +90,33 @@ def load(args):
     state['adapter'] = os.path.basename(adapter.rstrip('/\\'))
     return model, processor
 
-
 def decode_images(images):
     return [Image.open(io.BytesIO(base64.b64decode(images[k]))).convert('RGB') for k in ORDER]
+
+
+def parse_generate_request(content_type, body):
+    """JSON(Base64) 또는 multipart(바이너리) 요청에서 RGB 이미지와 메타데이터를 꺼낸다."""
+    if content_type.lower().startswith('application/json'):
+        req = json.loads(body)
+        return decode_images(req['images']), req['meta']
+    if content_type.lower().startswith('multipart/form-data'):
+        header = (f'Content-Type: {content_type}\r\nMIME-Version: 1.0\r\n\r\n').encode('latin1')
+        message = BytesParser(policy=policy.default).parsebytes(header + body)
+        if not message.is_multipart():
+            raise ValueError('Invalid multipart message')
+        parts = {}
+        for part in message.iter_parts():
+            name = part.get_param('name', header='content-disposition')
+            if name in (*ORDER, 'meta'):
+                if name in parts:
+                    raise ValueError(f'Duplicate field: {name}')
+                parts[name] = part.get_payload(decode=True)
+        if any(name not in parts for name in (*ORDER, 'meta')):
+            raise ValueError('Missing orig, cam, crop, or meta')
+        images = [Image.open(io.BytesIO(parts[k])).convert('RGB') for k in ORDER]
+        meta = json.loads(parts['meta'].decode('utf-8'))
+        return images, meta
+    raise ValueError(f'Unsupported content type: {content_type}')
 
 
 class Stop:
@@ -107,13 +130,11 @@ class Stop:
 
 def make_handler(model, processor, max_new_tokens):
     from transformers import StoppingCriteriaList, TextIteratorStreamer
-
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'  # chunked 전송은 1.1에서만 유효하다
 
         def log_message(self, fmt, *a):
             print(f'[vlm] {fmt % a}', file=sys.stderr, flush=True)
-
         def _json(self, code, obj):
             body = json.dumps(obj, ensure_ascii=False).encode('utf-8')
             self.send_response(code)
@@ -121,23 +142,28 @@ def make_handler(model, processor, max_new_tokens):
             self.send_header('Content-Length', str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-
         def do_GET(self):
             if self.path == '/health':
                 self._json(200, state)
             else:
                 self._json(404, {'error': 'not found'})
-
         def do_POST(self):
             if self.path != '/generate':
                 return self._json(404, {'error': 'not found'})
-            req = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            ex = {'images': list(ORDER), 'user_text': user_text(req['meta'])}
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                if not 0 < content_length <= 5 * 1024 * 1024:
+                    raise ValueError('Request size must be within 5 MB')
+                content_type = self.headers.get('Content-Type', '')
+                images, meta = parse_generate_request(
+                    content_type, self.rfile.read(content_length))
+            except (ValueError, KeyError, OSError, TypeError) as e:
+                return self._json(400, {'error': str(e)})
+            ex = {'images': list(ORDER), 'user_text': user_text(meta)}
             prompt = processor.apply_chat_template(build_messages(ex, False), tokenize=False,
                                                    add_generation_prompt=True)
-            enc = processor(text=[prompt], images=[decode_images(req['images'])],
+            enc = processor(text=[prompt], images=[images],
                             return_tensors='pt').to(model.device)
-
             streamer = TextIteratorStreamer(processor.tokenizer, skip_prompt=True,
                                             skip_special_tokens=True)
             stop = Stop()
@@ -170,7 +196,6 @@ def make_handler(model, processor, max_new_tokens):
                 state['last'] = {'first_s': round(first or 0, 1), 'total_s': round(total, 1), 'chars': n}
                 print(f'[vlm] 생성 완료: 첫 글자 {first or 0:.1f}초, 전체 {total:.1f}초, {n}자',
                       file=sys.stderr, flush=True)
-
         @torch.no_grad()
         def _generate(self, enc, streamer, stop):
             try:
@@ -180,9 +205,7 @@ def make_handler(model, processor, max_new_tokens):
                 print(f'[vlm] 생성 실패: {e!r}', file=sys.stderr, flush=True)
                 streamer.text_queue.put(f'\n[생성 실패: {e}]')
                 streamer.end()
-
     return Handler
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -195,7 +218,6 @@ def main():
     ap.add_argument('--threads', type=int, default=int(os.environ.get('VLM_THREADS', 6)))
     ap.add_argument('--max-new-tokens', type=int, default=1800)
     args = ap.parse_args()
-
     print('[vlm] Qwen2-VL + LoRA 로드 중...', file=sys.stderr, flush=True)
     model, processor = load(args)
     state['ready'] = True
