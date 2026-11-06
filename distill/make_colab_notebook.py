@@ -31,7 +31,7 @@ cells = [
 노트북 PC의 Streamlit 앱(MobileViT 판정·히트맵)은 그대로 두고, **해설을 쓰는 Qwen2-VL만 Colab GPU에서** 돌린다.
 
 1. 런타임 유형이 **T4 GPU** 인지 확인한다 (이 노트북은 T4로 저장돼 있다)
-2. **런타임 → 모두 실행** (Ctrl+F9). 별도의 어댑터 파일 업로드는 필요 없다
+2. **런타임 → 모두 실행** (Ctrl+F9). 별도의 어댑터 파일 업로드는 필요 없다. 9장 B안(프로젝터 LoRA) 어댑터를 쓰려면 1번 셀 맨 위 `VARIANT = 'B'`로 바꾼다
 3. 1번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트 `vlm_url.txt`에 적거나 앱 사이드바에 붙여 넣는다
 
 서버 코드와 어댑터는 공개 저장소 `main`에서 다운로드한다. **이번 Binary Multipart 서버 수정 파일을 main에 먼저 반영**한 뒤 실행할 것.
@@ -46,8 +46,11 @@ Colab 서버는 **기존 Base64 JSON과 Binary Multipart 둘 다 수신**하고,
 import hashlib, os, re, subprocess, time
 t_start = time.time()
 REPO, D = '/content/repo', '/content/repo/distill'
-ADAPTER = f'{D}/qwen2vl-distill/final-3ep'
-SHA = '1f4d48ef800abd4614150e1decf38fc709f3db7053dcd16cf908264767a89bf4'
+# 쓸 어댑터: 'A' = 언어 모델만 LoRA (3에포크) / 'B' = 언어 모델 + 프로젝터 LoRA (9장 B안)
+VARIANT = 'A'
+NAME, SHA = {'A': ('qwen2vl-distill/final-3ep', '1f4d48ef800abd4614150e1decf38fc709f3db7053dcd16cf908264767a89bf4'),
+             'B': ('qwen2vl-distill-proj/final', 'a7f1f2d4e036e47be933f7b77aedcbf38a918af3916a5ce8b264a29bdba0026c')}[VARIANT]
+ADAPTER = f'{D}/{NAME}'
 os.makedirs(ADAPTER, exist_ok=True)
 subprocess.run('pkill -f vlm_server.py; pkill -f cloudflared', shell=True)
 
@@ -60,8 +63,8 @@ LFS = 'https://media.githubusercontent.com/media/Sangmok-Woo/Image-Detection/mai
 wget = lambda pairs: ' && '.join(f'wget -q -O {dst} {src}' for dst, src in pairs)
 jobs = {
     'model': bg("python -c \"from huggingface_hub import snapshot_download as s; s('Qwen/Qwen2-VL-2B-Instruct')\"", 'model'),
-    'adapter': bg(wget([(f'{ADAPTER}/adapter_model.safetensors', f'{LFS}/distill/qwen2vl-distill/final-3ep/adapter_model.safetensors'),
-                        (f'{ADAPTER}/adapter_config.json', f'{RAW}/distill/qwen2vl-distill/final-3ep/adapter_config.json')]), 'adapter'),
+    'adapter': bg(wget([(f'{ADAPTER}/adapter_model.safetensors', f'{LFS}/distill/{NAME}/adapter_model.safetensors'),
+                        (f'{ADAPTER}/adapter_config.json', f'{RAW}/distill/{NAME}/adapter_config.json')]), 'adapter'),
     'code': bg(wget([(f'{D}/{f}', f'{RAW}/distill/{f}') for f in ('vlm_server.py', 'export_dataset.py', 'train_qlora.py')]), 'code'),
 }
 if not os.path.exists('/content/cloudflared'):
@@ -95,7 +98,7 @@ assert h == SHA, f'어댑터 해시 불일치: {h}'
 import requests
 # T4 실측(2026-09-30): fp16 + 어댑터 병합으로 해설 한 건 약 58초. 병합 전에는 115초였다.
 server = subprocess.Popen('exec python distill/vlm_server.py --host 127.0.0.1 --port 8502 --dtype fp16 '
-                          '--adapter distill/qwen2vl-distill/final-3ep > /content/server.log 2>&1',
+                          f'--adapter distill/{NAME} > /content/server.log 2>&1',
                           shell=True, cwd=REPO)
 # 터널은 모델이 올라가는 동안 같이 연다
 if 'cloudflared' in jobs and jobs['cloudflared'].wait() != 0:

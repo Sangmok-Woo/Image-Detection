@@ -25,6 +25,9 @@ MODEL_ID = 'Qwen/Qwen2-VL-2B-Instruct'
 SIDE = 392
 # 비전 인코더는 건드리지 않고 언어 모델 쪽만 LoRA를 붙인다
 TARGETS = r'^(?!.*visual).*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$'
+# B안(--proj): 프로젝터(visual.merger)의 두 선형 층에도 LoRA를 붙인다. 비전 인코더 본체는 그대로 동결.
+# PEFT는 정규식을 fullmatch로 비교하므로 앞에 .* 를 둬야 'model.visual.merger.mlp.0'에 걸린다
+PROJ_TARGETS = r'.*visual\.merger\.mlp\.(0|2)'
 
 
 def read_jsonl(path):
@@ -86,8 +89,12 @@ def train(args):
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
     model = get_peft_model(model, LoraConfig(
         r=args.rank, lora_alpha=args.rank * 2, lora_dropout=0.05,
-        target_modules=TARGETS, task_type='CAUSAL_LM'))
+        target_modules=f'{TARGETS}|{PROJ_TARGETS}' if args.proj else TARGETS, task_type='CAUSAL_LM'))
     model.print_trainable_parameters()
+    merger = [n for n, _ in model.named_modules() if 'merger' in n and n.endswith('lora_A')]
+    print(f'프로젝터 LoRA {len(merger)}개: {merger}', flush=True)
+    if args.proj and len(merger) != 2:
+        raise SystemExit('프로젝터에 LoRA가 붙지 않았다 — 모듈 이름을 확인할 것')
 
     targs = TrainingArguments(
         output_dir=args.out, num_train_epochs=args.epochs, learning_rate=args.lr,
@@ -149,6 +156,8 @@ if __name__ == '__main__':
     ap.add_argument('--lr', type=float, default=2e-4)
     ap.add_argument('--rank', type=int, default=16)
     ap.add_argument('--eval-only', action='store_true')
+    ap.add_argument('--proj', action='store_true',
+                    help='B안: 언어 모델 + 프로젝터(visual.merger.mlp.0/2)에 LoRA')
     ap.add_argument('--resume', nargs='?', const=True, default=None,
                     help='체크포인트에서 이어서 학습한다. 경로를 주거나, 빈 값이면 최신 것')
     ap.add_argument('--side', type=int, default=SIDE,

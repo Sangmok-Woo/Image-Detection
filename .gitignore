@@ -34,6 +34,12 @@ distill/qwen2vl-distill/*
 !distill/qwen2vl-distill/test_summary*.json
 !distill/qwen2vl-distill/test_predictions*.jsonl
 !distill/qwen2vl-distill/*.log
+# B안(프로젝터 LoRA) 학습 산출물도 같은 규칙
+distill/qwen2vl-distill-proj/*
+!distill/qwen2vl-distill-proj/final/
+!distill/qwen2vl-distill-proj/test_summary*.json
+!distill/qwen2vl-distill-proj/test_predictions*.jsonl
+!distill/qwen2vl-distill-proj/*.log
 distill/venv-train/
 venv-train/
 distill/predict_out/

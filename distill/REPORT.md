@@ -245,6 +245,88 @@ REAL 58/AI 41로 기울었다.
 `판정:` 한 줄만 본다. 설명문이 교사를 더 닮아가는 것과 판정이 맞는 것은 별개라는 뜻이다.
 증류 관점에서는 3에포크로 충분했고, 추가로 쓴 1시간 35분은 정확도에 기여하지 않았다.
 
+## 9장 B안: 프로젝터에도 LoRA (2026-11-07)
+
+보고서 9.2절의 B안이다. A안(위 학습)은 정규식으로 `visual`이 들어간 모듈을 전부 빼서 프로젝터
+(`visual.merger`)가 사전학습 그대로였다. B안은 언어 모델 LoRA는 그대로 두고 프로젝터의 두 선형 층
+`visual.merger.mlp.0`, `mlp.2`에만 LoRA를 더 붙인다. 비전 인코더 본체는 동결.
+
+```
+./venv-train/Scripts/python distill/train_qlora.py --data distill/dataset --out distill/qwen2vl-distill-proj --side 336 --epochs 5 --proj
+./venv-train/Scripts/python distill/train_qlora.py --data distill/dataset --out distill/qwen2vl-distill-proj --side 336 --eval-only
+./venv-train/Scripts/python distill/compare_ab.py
+```
+
+데이터(train 722 / val 39 / test 100), r=16, alpha 32, lr 2e-4 cosine, 배치 1×8, 336px 전부 A안과 같다.
+바뀐 것은 `--proj` 하나다.
+
+**보고서 [코드 9-1]의 정규식은 그대로 쓰면 안 붙는다.** PEFT는 `target_modules` 문자열을 `re.fullmatch`로
+비교하므로 `visual\.merger\.mlp\.(0|2)$`는 실제 이름 `model.visual.merger.mlp.0`에 걸리지 않는다.
+앞에 `.*`를 붙였고, 학습 시작 때 프로젝터 LoRA가 정확히 2개 붙었는지 확인해 아니면 멈추게 했다.
+
+### 파라미터
+
+| | A안 | B안 |
+|---|---|---|
+| 학습 파라미터 | 18,464,768 | 18,735,104 (+270,336) |
+| 비율 | 0.829% | 0.841% |
+
+프로젝터 LoRA가 붙은 모듈: `visual.merger.mlp.0`(5120→5120), `visual.merger.mlp.2`(5120→1536).
+
+### 학습 곡선
+
+5에포크 한 번에 돌렸다(455스텝, RTX 4060 Ti에서 4시간 33분). A안은 3에포크 학습 후 6에포크로 이어
+돌린 것이라 스케줄이 완전히 같지는 않다.
+
+| 에포크 | A안 검증 손실 | B안 검증 손실 |
+|---|---|---|
+| 1 | 1.0175 | 1.0220 |
+| 2 | 0.9244 | 0.9162 |
+| 3 | 0.9100 | 0.8727 |
+| 4 | 0.8850 | **0.8633** (최저점, 선택됨) |
+| 5 | **0.8813** | 0.8738 |
+
+B안은 4에포크에 최저점을 찍었고 `final/`은 `checkpoint-364`(4에포크)와 해시가 같다.
+최저 검증 손실이 0.881 → 0.863으로 낮다.
+
+### 채점 결과 (test 100장)
+
+| 출처 | A안 | B안 | 교사 | MobileViT |
+|---|---|---|---|---|
+| ADM | 8/8 | 8/8 | 2/8 | 8/8 |
+| BigGAN | 5/7 | **7/7** | 4/7 | 7/7 |
+| GLIDE | 3/7 | **6/7** | 6/7 | 7/7 |
+| Midjourney | 5/7 | 6/7 | 7/7 | 4/7 |
+| SD15 | 2/7 | **5/7** | 6/7 | 6/7 |
+| VQDM | 6/7 | 6/7 | 4/7 | 7/7 |
+| Wukong | 6/7 | 7/7 | 7/7 | 6/7 |
+| 실제 사진 | 43/50 | 37/50 | 49/50 | 22/50 |
+| **합계** | **78** | **82** | 85 | 67 |
+
+형식 준수는 둘 다 99%. 9.3절에서 보려던 SD 1.5(2→5)와 GLIDE(3→6)가 실제로 올랐다.
+
+### 그대로 믿으면 안 되는 이유
+
+- **AI 쪽으로 기울었다.** 예측 분포가 A안 REAL 58 / AI 41에서 B안 REAL 41 / AI 58로 뒤집혔다.
+  AI 샘플 정답이 35→45로 오른 대신 실제 사진이 43→37로 내려갔다. 악화 9건 중 8건이 실제 사진이다.
+  정확도 상승의 상당 부분이 판정 경계 이동일 수 있다.
+- **통계적으로 유의하지 않다.** 판정이 바뀐 22건이 개선 13 / 악화 9로, McNemar 정확 검정 p≈0.52다.
+  A안 3에포크↔5에포크도 21건이 10/10으로 바뀌었으니, 100장에서 ±4%p는 학습 노이즈 범위 안이다.
+- 그래도 검증 손실(교사 해설 재현도)이 일관되게 낮고, 약점이던 SD 1.5·GLIDE가 함께 오른 것은
+  프로젝터 적응 방향과 맞는다. 결론을 내리려면 시드를 바꿔 반복하거나 test를 늘려야 한다.
+- 해설이 귀·눈·털 세부를 더 정확히 짚는지는 수치로 안 잡힌다. `qwen2vl-distill-proj/test_predictions.jsonl`의
+  `student_text`를 A안 같은 id와 나란히 읽어 봐야 한다 (평균 길이는 1,772자 → 1,761자로 비슷).
+
+### 어댑터 쓰기
+
+`distill/qwen2vl-distill-proj/final/` (LFS, 72MB). 베이스 모델과 나머지 코드는 A안과 같다.
+
+```
+venv-train\Scripts\python distill\vlm_server.py --adapter distill\qwen2vl-distill-proj\final
+venv-train\Scripts\python distill\predict.py <이미지> --adapter distill\qwen2vl-distill-proj\final
+```
+Colab은 `colab_vlm_server.ipynb` 1번 셀 맨 위를 `VARIANT = 'B'`로 바꾸면 B안 어댑터를 받는다.
+
 ## 한계와 남은 것
 
 발표에 반드시 적어야 할 것 네 가지다.

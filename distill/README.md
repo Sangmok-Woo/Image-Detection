@@ -162,6 +162,9 @@ TensorFlow(`venv`)와 torch(`venv-train`)는 numpy 버전이 달라 한 환경�
 
 여러 장을 주면 MobileViT를 먼저 몰아 돌리고 Qwen을 한 번만 올린다.
 
+**9장 B안 어댑터**(언어 모델 + 프로젝터 LoRA, test 82%)는 `--adapter distill/qwen2vl-distill-proj/final`.
+A안과의 비교는 [REPORT.md](REPORT.md)의 「9장 B안」 절.
+
 **한계**: 2B 모델이라 없는 것을 지어내는 경우가 있다. 형식(장면·판정·근거·히트맵·판단과정·설명)은
 안정적이지만 세부 묘사는 검증이 필요하다.
 
