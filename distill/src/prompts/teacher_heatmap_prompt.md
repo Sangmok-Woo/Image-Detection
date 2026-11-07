@@ -3,7 +3,7 @@
 분류기 모델이 새 버전으로 바뀌어 히트맵·크롭·분류기 판정이 달라졌다.
 원본 이미지를 보고 쓴 **판정과 근거는 그대로 두고**, 모델이 관여하는 부분만 다시 쓴다.
 
-각 샘플마다 `distill/work/panel/{id}.jpg` 한 장을 본다 (1 원본 | 2 새 Grad-CAM, 흰 박스 = 크롭 위치 | 3 크롭 3배 확대).
+각 샘플마다 `distill/src/work/panel/{id}.jpg` 한 장을 본다 (1 원본 | 2 새 Grad-CAM, 흰 박스 = 크롭 위치 | 3 크롭 3배 확대).
 배치 파일 한 줄에는 다음이 있다.
 - `mobilevit_prob_real`, `mobilevit_pred`: 새 분류기 확률(1에 가까울수록 실제 사진)과 판정
 - `teacher_verdict`, `teacher_confidence`, `observations`: 이전에 원본을 보고 내린 판정·확신·근거 (**바꾸지 않는다**)

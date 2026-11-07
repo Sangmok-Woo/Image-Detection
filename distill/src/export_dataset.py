@@ -1,13 +1,13 @@
 """3단계: 파이프라인 결과(meta) + 교사 설명(teacher)을 합쳐 QLoRA용 데이터셋으로 내보낸다.
 
 사용법:
-    venv\\Scripts\\python.exe distill\\export_dataset.py
+    venv\\Scripts\\python.exe distill\\src\\export_dataset.py
 
-결과 (distill/dataset/):
+결과 (distill/src/dataset/):
     images/{id}_orig.jpg, _cam.jpg, _crop.jpg
     train.jsonl / val.jsonl / test.jsonl
     stats.json   교사 정확도, 분류기 정확도, 버린 샘플 수
-그리고 distill/tiny_genimage_distill.zip (Colab 업로드용)
+그리고 distill/src/tiny_genimage_distill.zip (Colab 업로드용)
 
 train/val은 교사 판정이 정답과 맞은 샘플만 남긴다 (틀린 설명을 외우지 않게).
 test는 전부 남긴다 (학생 모델을 정답 라벨로 채점하려고).
@@ -90,8 +90,8 @@ def valid(t):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--work', default='distill/work')
-    ap.add_argument('--out', default='distill/dataset')
+    ap.add_argument('--work', default='distill/src/work')
+    ap.add_argument('--out', default='distill/src/dataset')
     ap.add_argument('--n-test', type=int, default=100)
     ap.add_argument('--n-val', type=int, default=50)
     ap.add_argument('--seed', type=int, default=42)

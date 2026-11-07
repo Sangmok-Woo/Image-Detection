@@ -1,9 +1,9 @@
 """신모델로 판정·Grad-CAM·크롭·패널만 다시 만든다. 원본(std/)은 그대로 쓴다.
 
 사용법:
-    venv\\Scripts\\python.exe distill\\regen_new_model.py
-입력: distill/work/std/, distill/work/old_model/meta.jsonl (id·정답·생성기·출처)
-출력: distill/work/meta.jsonl, cam/, crop/, panel/  (구모델 결과는 old_model/에 백업돼 있다)
+    venv\\Scripts\\python.exe distill\\src\\regen_new_model.py
+입력: distill/src/work/std/, distill/src/work/old_model/meta.jsonl (id·정답·생성기·출처)
+출력: distill/src/work/meta.jsonl, cam/, crop/, panel/  (구모델 결과는 old_model/에 백업돼 있다)
 """
 import json
 import os
@@ -23,7 +23,7 @@ tf.config.threading.set_inter_op_parallelism_threads(1)
 sys.path.insert(0, os.path.dirname(__file__))
 from build_samples import MODEL_PATH, SIZE, crop_box, gradcam, last_conv_name, make_overlay, make_panel
 
-WORK = 'distill/work'
+WORK = 'distill/src/work'
 
 
 def main():

@@ -1,5 +1,15 @@
 # Claude → Qwen2-VL 설명 증류
 
+```
+distill/
+  models/
+    mobilevit2/       MobileViT v2 분류기 (MobileViT2_Model.h5 = 신모델, _old.h5 = CIFAKE 구모델)
+    qwen2vl-A-lm/     학생 어댑터 A안 — 언어 모델 LoRA. final-3ep(LFS) / final(5ep, 가중치 미포함), test 78%
+    qwen2vl-B-proj/   학생 어댑터 B안 — 언어 모델 + 프로젝터 LoRA. final(LFS), test 82%
+  src/                아래 표의 스크립트 전부, prompts/(교사 지침), work/(교사 해설), docs/(REPORT·HANDOFF·보고서 그림)
+```
+명령은 저장소 루트에서 `python distill/src/<스크립트>.py` 로 실행한다.
+
 MobileViT 판정 + Grad-CAM 히트맵 + 히트맵 크롭을 Claude(Opus 5)가 보고 쓴 한국어 설명을
 Qwen2-VL-2B에 QLoRA로 옮겨 담는다. 데이터: Hugging Face `TheKernel01/Tiny-GenImage` (CC BY-NC-SA 4.0)
 
@@ -114,7 +124,7 @@ pull이 덜 돼 1차는 구모델(CIFAKE)로 만들었다. 두 모델의 히트�
 제한될 수 있다. 근거·판단과정을 앞에 두는 순서를 실험해 볼 여지가 있다.
 
 ## 2026-09-27 4차 — Qwen2-VL QLoRA 학습·채점 완료 ✅
-전체 경과와 수치는 **[REPORT.md](REPORT.md)** 에 정리했다. 아래는 요약이다.
+전체 경과와 수치는 **[REPORT.md](src/docs/REPORT.md)** 에 정리했다. 아래는 요약이다.
 
 | | test 100장 정확도 |
 |---|---|
@@ -141,7 +151,7 @@ pull이 덜 돼 1차는 구모델(CIFAKE)로 만들었다. 두 모델의 히트�
 
 ## 추론 — 이미지 한 장 넣고 평가문 받기
 ```
-venv-train\Scripts\python.exe distill\predict.py <이미지> [<이미지> ...]
+venv-train\Scripts\python.exe distill\src\predict.py <이미지> [<이미지> ...]
 ```
 MobileViT 판정 + Grad-CAM + 크롭을 만들고, 증류된 Qwen2-VL이 한국어 평가문을 쓴다.
 학습 때(`export_dataset.py`)와 **글자 하나까지 같은 프롬프트**를 쓰려고 `user_text`를 거기서
@@ -154,20 +164,20 @@ TensorFlow(`venv`)와 torch(`venv-train`)는 numpy 버전이 달라 한 환경�
 
 | 옵션 | 뜻 |
 |---|---|
-| `--adapter` | LoRA 어댑터 (기본 `distill/qwen2vl-distill/final`) |
+| `--adapter` | LoRA 어댑터 (기본 `distill/models/qwen2vl-A-lm/final`) |
 | `--json` | 결과를 JSONL로. 판정·확신·히트맵 평가를 파싱해 함께 넣는다 |
-| `--out` | 중간 산출물 폴더 (기본 `distill/predict_out/<파일명>`) |
+| `--out` | 중간 산출물 폴더 (기본 `distill/src/predict_out/<파일명>`) |
 | `--panel` | 교사용 3칸 패널도 남긴다 |
 | `--side` | 이미지 한 변(px). VRAM이 모자라면 낮춘다 |
 
 여러 장을 주면 MobileViT를 먼저 몰아 돌리고 Qwen을 한 번만 올린다.
 
-**9장 B안 어댑터**(언어 모델 + 프로젝터 LoRA, test 82%)는 `--adapter distill/qwen2vl-distill-proj/final`.
-A안과의 비교는 [REPORT.md](REPORT.md)의 「9장 B안」 절.
+**9장 B안 어댑터**(언어 모델 + 프로젝터 LoRA, test 82%)는 `--adapter distill/models/qwen2vl-B-proj/final`.
+A안과의 비교는 [REPORT.md](src/docs/REPORT.md)의 「9장 B안」 절.
 
 **한계**: 2B 모델이라 없는 것을 지어내는 경우가 있다. 형식(장면·판정·근거·히트맵·판단과정·설명)은
 안정적이지만 세부 묘사는 검증이 필요하다.
 
 ## 다른 기기로 옮기기
-[HANDOFF.md](HANDOFF.md) — 무엇을 옮기고(261MB) 무엇을 다시 만드는지, 노트북 환경 구축 절차,
+[HANDOFF.md](src/docs/HANDOFF.md) — 무엇을 옮기고(261MB) 무엇을 다시 만드는지, 노트북 환경 구축 절차,
 데스크탑 정리 명령까지.

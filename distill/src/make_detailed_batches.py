@@ -2,15 +2,15 @@
 merge 모드: teacher_detailed/의 상세 설명을 teacher/batch_all.jsonl의 판정·근거와 합쳐
 teacher_full/batch_all.jsonl에 쓴다. 기존 teacher/는 건드리지 않는다.
 
-    python distill/make_detailed_batches.py          # 배치 만들기 (50개씩)
-    python distill/make_detailed_batches.py merge    # 합치기
+    python distill/src/make_detailed_batches.py          # 배치 만들기 (50개씩)
+    python distill/src/make_detailed_batches.py merge    # 합치기
 """
 import glob
 import json
 import os
 import sys
 
-WORK = 'distill/work'
+WORK = 'distill/src/work'
 SIZE = 50
 KEEP = ['teacher_verdict', 'teacher_confidence', 'observations']
 DETAIL = ['scene', 'evidence_ai', 'evidence_real', 'heatmap_focus_detailed',

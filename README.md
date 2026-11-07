@@ -12,7 +12,7 @@ MobileViT v2가 판정하고, 직접 증류한 Qwen2-VL이 이유를 씁니다.
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.40-FF4B4B?logo=streamlit&logoColor=white)
 ![Model](https://img.shields.io/badge/VLM-Qwen2--VL--2B%20%2B%20QLoRA-6f42c1)
 
-<img src="distill/report/fig/fig_app.png" width="860" alt="앱 실행 화면">
+<img src="distill/src/docs/report/fig/fig_app.png" width="860" alt="앱 실행 화면">
 
 </div>
 
@@ -46,17 +46,17 @@ Tiny-GenImage에서 뽑은 평가 세트 100장(실제 50, 생성 50) 기준입�
 맞힌 실제 사진에서는 43장을 맞혔습니다.
 
 <div align="center">
-<img src="distill/report/fig/fig_accuracy.png" width="520" alt="정확도 비교">
+<img src="distill/src/docs/report/fig/fig_accuracy.png" width="520" alt="정확도 비교">
 </div>
 
 덧붙여 Grad-CAM을 1,000장에 대해 검증한 결과, 히트맵이 판정 근거를 제대로 짚은 경우는 22.3%뿐이었고
 최고점이 이미지 모서리에 찍히는 비율이 우연의 2.6배였습니다. 자세한 수치는
-[distill/REPORT.md](distill/REPORT.md)에 있습니다.
+[distill/src/docs/REPORT.md](distill/src/docs/REPORT.md)에 있습니다.
 
 ## 어떻게 동작하는가
 
 <div align="center">
-<img src="distill/report/fig/fig_pipeline.png" width="760" alt="파이프라인">
+<img src="distill/src/docs/report/fig/fig_pipeline.png" width="760" alt="파이프라인">
 </div>
 
 **학습 단계.** 이미지 1,000장마다 원본, Grad-CAM 히트맵, 히트맵 최고점을 3배 확대한 크롭을 만듭니다.
@@ -64,7 +64,7 @@ Claude가 정답을 모르는 채로 이 3장을 보고 해설을 쓰고, Qwen2-
 재현하도록 QLoRA로 학습합니다. 전체 22.3억 파라미터 중 0.83%만 학습하므로 VRAM 8GB에서 돌아갑니다.
 
 <div align="center">
-<img src="distill/report/fig/fig_panel_tg0078.png" width="760" alt="학생 모델 입력 3장">
+<img src="distill/src/docs/report/fig/fig_panel_tg0078.png" width="760" alt="학생 모델 입력 3장">
 <br><sub>학생 모델이 받는 3장. 이 사진은 Midjourney로 만든 것인데 분류기는 실제 사진(0.89)으로 오판했고, 학생은 AI 생성으로 맞혔습니다.</sub>
 </div>
 
@@ -129,9 +129,9 @@ Qwen2-VL 베이스 모델(4.4GB)은 저장소에 없고, 처음 실행할 때 Hu
 | Colab T4, 어댑터 미병합 | 5.5초 | 115초 |
 | **Colab T4, 어댑터 병합** | **2.4초** | **58초** |
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sangmok-Woo/Image-Detection/blob/main/distill/colab_vlm_server.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sangmok-Woo/Image-Detection/blob/main/distill/src/colab_vlm_server.ipynb)
 
-1. 위 버튼으로 [distill/colab_vlm_server.ipynb](distill/colab_vlm_server.ipynb)를 Colab에서 엽니다 (런타임은 T4 GPU로 저장돼 있습니다)
+1. 위 버튼으로 [distill/src/colab_vlm_server.ipynb](distill/src/colab_vlm_server.ipynb)를 Colab에서 엽니다 (런타임은 T4 GPU로 저장돼 있습니다)
 2. **런타임 → 모두 실행**. 올릴 파일은 없습니다. 서버 코드와 어댑터는 이 저장소 main에서 받습니다
 3. 1번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트의
    `vlm_url.txt`에 한 줄로 적습니다 (앱 왼쪽 사이드바에 붙여 넣어도 됩니다)
@@ -141,8 +141,8 @@ Qwen2-VL 베이스 모델(4.4GB)은 저장소에 없고, 처음 실행할 때 Hu
 모델 다운로드와 서버 기동을 겹쳐 돌리기 때문입니다.
 
 무료 Colab은 한동안 쓰지 않으면 세션이 끝나고 주소도 매번 바뀝니다.
-`distill/vlm_server.py`를 고쳤으면 main에 올린 뒤 실행해야 반영됩니다.
-노트북은 `python distill/make_colab_notebook.py`로 다시 만듭니다.
+`distill/src/vlm_server.py`를 고쳤으면 main에 올린 뒤 실행해야 반영됩니다.
+노트북은 `python distill/src/make_colab_notebook.py`로 다시 만듭니다.
 
 ## 저장소 구성
 
@@ -151,31 +151,33 @@ app.py                     Streamlit 앱
 vlm_client.py              전처리(384 표준화, Grad-CAM, 크롭)와 추론 서버 호출
 model_utils.py             MobileViT 모델 로드
 run.cmd                    추론 서버와 앱을 함께 띄우는 실행 스크립트
-MobileViT2_Model/          분류기 가중치(LFS)와 학습 코드
 distill/
-  build_samples.py         이미지 1,000장 → 판정 · 히트맵 · 크롭
-  export_dataset.py        교사 해설과 합쳐 학습 데이터셋으로 내보내기
-  train_qlora.py           QLoRA 학습과 채점
-  vlm_server.py            추론 서버 (어댑터 병합, 스트리밍)
-  colab_vlm_server.ipynb   Colab용 추론 서버
-  qwen2vl-distill/         학습된 LoRA 어댑터(LFS), 학습 로그, 채점 결과
-  work/                    교사 해설 1,000건과 메타데이터
-  REPORT.md                실험 결과와 수치
-  HANDOFF.md               다른 PC로 옮기는 절차, 재학습 방법
-  report/                  보고서 그림과 생성 스크립트
+  models/                  ← 모델은 전부 여기
+    mobilevit2/            MobileViT v2 분류기 가중치(LFS)와 학습 코드
+    qwen2vl-A-lm/          학생 Qwen2-VL 어댑터 A안 (언어 모델 LoRA, test 78%) + 로그·채점
+    qwen2vl-B-proj/        학생 Qwen2-VL 어댑터 B안 (+ 프로젝터 LoRA, test 82%) + 로그·채점
+  src/                     ← 코드·문서·데이터
+    build_samples.py       이미지 1,000장 → 판정 · 히트맵 · 크롭
+    export_dataset.py      교사 해설과 합쳐 학습 데이터셋으로 내보내기
+    train_qlora.py         QLoRA 학습과 채점 (--proj = B안)
+    vlm_server.py          추론 서버 (어댑터 병합, 스트리밍)
+    colab_vlm_server.ipynb Colab용 추론 서버
+    prompts/               교사(Claude) 지침
+    work/                  교사 해설 1,000건과 메타데이터
+    docs/                  REPORT.md(실험 결과), HANDOFF.md(이전·재학습 절차), report/(보고서 그림)
 ```
 
 ## 다시 학습하려면
 
-데이터 생성부터 학습, 채점까지의 명령은 [distill/HANDOFF.md](distill/HANDOFF.md)와
-[distill/REPORT.md](distill/REPORT.md)의 재현 순서에 정리되어 있습니다. 요약하면 다음과 같습니다.
+데이터 생성부터 학습, 채점까지의 명령은 [distill/src/docs/HANDOFF.md](distill/src/docs/HANDOFF.md)와
+[distill/src/docs/REPORT.md](distill/src/docs/REPORT.md)의 재현 순서에 정리되어 있습니다. 요약하면 다음과 같습니다.
 
 ```bash
-venv\Scripts\python distill\build_samples.py --shards data\train-00000.parquet data\train-00001.parquet --n 1000
-del distill\work\meta.jsonl
-venv\Scripts\python distill\regen_new_model.py
-venv\Scripts\python distill\export_dataset.py --detailed
-venv-train\Scripts\python distill\train_qlora.py --data distill\dataset --out distill\qwen2vl-distill --side 336
+venv\Scripts\python distill\src\build_samples.py --shards data\train-00000.parquet data\train-00001.parquet --n 1000
+del distill\src\work\meta.jsonl
+venv\Scripts\python distill\src\regen_new_model.py
+venv\Scripts\python distill\src\export_dataset.py --detailed
+venv-train\Scripts\python distill\src\train_qlora.py --data distill\src\dataset --out distill\models\qwen2vl-A-lm --side 336
 ```
 
 학습에는 NVIDIA GPU(VRAM 8GB 이상)가 필요합니다. RTX 4060 Ti에서 VRAM을 최대 7.46GB 사용했습니다.

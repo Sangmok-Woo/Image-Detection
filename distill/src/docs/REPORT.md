@@ -18,7 +18,7 @@ MobileViT(67%)를 11%p 앞섰다. 부수적으로 **Grad-CAM이 판정 근거를
 | 교사 상세 설명 | `work/teacher_full/batch_all.jsonl` | 1000줄 |
 | QLoRA 데이터셋 | `dataset/` | train 722 / val 39 / test 100 |
 | Colab 업로드용 zip | `tiny_genimage_distill.zip` | 102MB |
-| 학습된 어댑터 | `qwen2vl-distill/final/` | LoRA r=16 |
+| 학습된 어댑터 | `distill/models/qwen2vl-A-lm/final/` | LoRA r=16 |
 
 이미지와 체크포인트는 `.gitignore` 대상이라 저장소에 없다. 텍스트만 올라가 있다.
 
@@ -252,9 +252,9 @@ REAL 58/AI 41로 기울었다.
 `visual.merger.mlp.0`, `mlp.2`에만 LoRA를 더 붙인다. 비전 인코더 본체는 동결.
 
 ```
-./venv-train/Scripts/python distill/train_qlora.py --data distill/dataset --out distill/qwen2vl-distill-proj --side 336 --epochs 5 --proj
-./venv-train/Scripts/python distill/train_qlora.py --data distill/dataset --out distill/qwen2vl-distill-proj --side 336 --eval-only
-./venv-train/Scripts/python distill/compare_ab.py
+./venv-train/Scripts/python distill/src/train_qlora.py --data distill/src/dataset --out distill/models/qwen2vl-B-proj --side 336 --epochs 5 --proj
+./venv-train/Scripts/python distill/src/train_qlora.py --data distill/src/dataset --out distill/models/qwen2vl-B-proj --side 336 --eval-only
+./venv-train/Scripts/python distill/src/compare_ab.py
 ```
 
 데이터(train 722 / val 39 / test 100), r=16, alpha 32, lr 2e-4 cosine, 배치 1×8, 336px 전부 A안과 같다.
@@ -314,16 +314,16 @@ B안은 4에포크에 최저점을 찍었고 `final/`은 `checkpoint-364`(4에�
   A안 3에포크↔5에포크도 21건이 10/10으로 바뀌었으니, 100장에서 ±4%p는 학습 노이즈 범위 안이다.
 - 그래도 검증 손실(교사 해설 재현도)이 일관되게 낮고, 약점이던 SD 1.5·GLIDE가 함께 오른 것은
   프로젝터 적응 방향과 맞는다. 결론을 내리려면 시드를 바꿔 반복하거나 test를 늘려야 한다.
-- 해설이 귀·눈·털 세부를 더 정확히 짚는지는 수치로 안 잡힌다. `qwen2vl-distill-proj/test_predictions.jsonl`의
+- 해설이 귀·눈·털 세부를 더 정확히 짚는지는 수치로 안 잡힌다. `distill/models/qwen2vl-B-proj/test_predictions.jsonl`의
   `student_text`를 A안 같은 id와 나란히 읽어 봐야 한다 (평균 길이는 1,772자 → 1,761자로 비슷).
 
 ### 어댑터 쓰기
 
-`distill/qwen2vl-distill-proj/final/` (LFS, 72MB). 베이스 모델과 나머지 코드는 A안과 같다.
+`distill/models/qwen2vl-B-proj/final/` (LFS, 72MB). 베이스 모델과 나머지 코드는 A안과 같다.
 
 ```
-venv-train\Scripts\python distill\vlm_server.py --adapter distill\qwen2vl-distill-proj\final
-venv-train\Scripts\python distill\predict.py <이미지> --adapter distill\qwen2vl-distill-proj\final
+venv-train\Scripts\python distill\src\vlm_server.py --adapter distill\models\qwen2vl-B-proj\final
+venv-train\Scripts\python distill\src\predict.py <이미지> --adapter distill\models\qwen2vl-B-proj\final
 ```
 Colab은 `colab_vlm_server.ipynb` 1번 셀 맨 위를 `VARIANT = 'B'`로 바꾸면 B안 어댑터를 받는다.
 
@@ -365,22 +365,22 @@ py -3.11 -m venv venv && ./venv/Scripts/pip install -r requirements.txt pyarrow 
 #    data/train-00000.parquet, data/train-00001.parquet
 
 # 3. 이미지 1000장 — 두 단계를 반드시 이어서
-./venv/Scripts/python distill/build_samples.py --shards data/train-0000{0,1}.parquet --n 1000
-rm distill/work/meta.jsonl
-./venv/Scripts/python distill/regen_new_model.py
+./venv/Scripts/python distill/src/build_samples.py --shards data/train-0000{0,1}.parquet --n 1000
+rm distill/src/work/meta.jsonl
+./venv/Scripts/python distill/src/regen_new_model.py
 
 # 4. 교사 상세 설명 (Claude Code 서브에이전트 20개)
-./venv/Scripts/python distill/make_detailed_batches.py
+./venv/Scripts/python distill/src/make_detailed_batches.py
 #    → teacher_detailed_prompt.md 대로 work/teacher_detailed/dbatch_NN.jsonl 작성
-./venv/Scripts/python distill/check_detailed.py
-./venv/Scripts/python distill/make_detailed_batches.py merge
+./venv/Scripts/python distill/src/check_detailed.py
+./venv/Scripts/python distill/src/make_detailed_batches.py merge
 
 # 5. 내보내기 + 통계
-./venv/Scripts/python distill/export_dataset.py --detailed
-./venv/Scripts/python distill/stats_detailed.py
+./venv/Scripts/python distill/src/export_dataset.py --detailed
+./venv/Scripts/python distill/src/stats_detailed.py
 
 # 6. 학습 (별도 venv: torch cu124 + transformers + peft + bitsandbytes + accelerate)
-./venv-train/Scripts/python distill/smoke_test.py --data distill/dataset
-./venv-train/Scripts/python distill/train_qlora.py --data distill/dataset --out distill/qwen2vl-distill --side 336
-./venv-train/Scripts/python distill/train_qlora.py --data distill/dataset --out distill/qwen2vl-distill --side 336 --eval-only
+./venv-train/Scripts/python distill/src/smoke_test.py --data distill/src/dataset
+./venv-train/Scripts/python distill/src/train_qlora.py --data distill/src/dataset --out distill/models/qwen2vl-A-lm --side 336
+./venv-train/Scripts/python distill/src/train_qlora.py --data distill/src/dataset --out distill/models/qwen2vl-A-lm --side 336 --eval-only
 ```

@@ -3,7 +3,7 @@
 torch 환경(로컬 venv-train 또는 Colab)에서 돈다. 앱은 TensorFlow venv라 모델을 직접 못
 올리므로 HTTP로 붙는다. 모델은 서버가 뜰 때 한 번만 올린다.
 
-    venv-train\\Scripts\\python.exe distill\\vlm_server.py [--port 8502] [--quant auto|4bit|none]
+    venv-train\\Scripts\\python.exe distill\\src\\vlm_server.py [--port 8502] [--quant auto|4bit|none]
 
 GET  /health    {"ready": bool, "device": ..., "adapter": ..., "last": {...}, "transports": [...]}
 POST /generate  JSON: {"images": {"orig": <b64>, "cam": <b64>, "crop": <b64>}, "meta": {...}}
@@ -36,7 +36,7 @@ from train_qlora import MODEL_ID, build_messages
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # 5에포크판(final)이 없으면 3에포크판을 쓴다. test 정확도는 둘 다 78%로 같다.
-ADAPTERS = [os.path.join(HERE, 'qwen2vl-distill', d) for d in ('final', 'final-3ep')]
+ADAPTERS = [os.path.join(os.path.dirname(HERE), 'models', 'qwen2vl-A-lm', d) for d in ('final', 'final-3ep')]
 # 학습 때 이미지 한 변. 다르면 학생이 못 보던 토큰 수가 들어간다.
 SIDE = 336
 # 학습 데이터와 같은 순서: 원본, 히트맵, 크롭

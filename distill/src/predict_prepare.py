@@ -3,7 +3,7 @@
 TensorFlow가 있는 venv에서 돈다 (torch venv와 numpy 버전이 달라 환경을 나눴다).
 보통은 predict.py가 알아서 불러 쓰고, 직접 쓸 일은 디버깅할 때뿐이다.
 
-    venv\\Scripts\\python.exe distill\\predict_prepare.py <이미지> --out <폴더>
+    venv\\Scripts\\python.exe distill\\src\\predict_prepare.py <이미지> --out <폴더>
 
 결과 (out/):
     orig.jpg  cam.jpg  crop.jpg  meta.json

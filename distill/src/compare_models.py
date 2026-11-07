@@ -1,8 +1,8 @@
-"""구모델(_old)과 신모델을 distill/work/std의 1000장에 돌려 판정과 Grad-CAM을 비교한다.
+"""구모델(_old)과 신모델을 distill/src/work/std의 1000장에 돌려 판정과 Grad-CAM을 비교한다.
 
 사용법:
-    venv\\Scripts\\python.exe distill\\compare_models.py
-결과: distill/work/compare/summary.json, per_sample.jsonl
+    venv\\Scripts\\python.exe distill\\src\\compare_models.py
+결과: distill/src/work/compare/summary.json, per_sample.jsonl
 """
 import json
 import os
@@ -19,8 +19,8 @@ tf.config.threading.set_intra_op_parallelism_threads(2)
 tf.config.threading.set_inter_op_parallelism_threads(1)
 from PIL import Image
 
-WORK = 'distill/work'
-MODELS = {'old': 'MobileViT2_Model/MobileViT2_Model_old.h5', 'new': 'MobileViT2_Model/MobileViT2_Model.h5'}
+WORK = 'distill/src/work'
+MODELS = {'old': 'distill/models/mobilevit2/MobileViT2_Model_old.h5', 'new': 'distill/models/mobilevit2/MobileViT2_Model.h5'}
 BATCH = 1
 N = int(os.environ.get('N', '30'))  # 진짜 절반 + 생성기별 균등으로 N장만 본다
 

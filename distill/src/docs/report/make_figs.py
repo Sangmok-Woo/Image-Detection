@@ -83,7 +83,7 @@ def pipeline():
 
 # ── 그림 2: 입력 3장 패널 ────────────────────────────────────────────────────────
 def panel(sid, box_xy, name):
-    d = f'{REPO}/distill/dataset/images'
+    d = f'{REPO}/distill/src/dataset/images'
     ims = [Image.open(f'{d}/{sid}_{k}.jpg').convert('RGB') for k in ('orig', 'cam', 'crop')]
     ImageDraw.Draw(ims[1]).rectangle(box_xy, outline=(255, 255, 255), width=3)
     f = ImageFont.truetype(r'C:\Windows\Fonts\malgunbd.ttf', 17)
@@ -101,7 +101,7 @@ def panel(sid, box_xy, name):
 def curve():
     tr, ev = [], []
     for log in ('train.log', 'train6.log'):
-        t = open(f'{REPO}/distill/qwen2vl-distill/{log}', encoding='utf-8', errors='ignore').read().replace('\r', '\n')
+        t = open(f'{REPO}/distill/models/qwen2vl-A-lm/{log}', encoding='utf-8', errors='ignore').read().replace('\r', '\n')
         for m in re.finditer(r"\{'(loss|eval_loss)': '([\d.]+)'.*?'epoch': '([\d.]+)'\}", t):
             (tr if m.group(1) == 'loss' else ev).append((float(m.group(3)), float(m.group(2))))
     tr = sorted(set(tr)); ev = sorted(set(ev))
@@ -123,7 +123,7 @@ def curve():
 
 # ── 그림 4: 정확도 비교 ──────────────────────────────────────────────────────────
 def accuracy():
-    rows = [json.loads(l) for l in open(f'{REPO}/distill/qwen2vl-distill/test_predictions.jsonl', encoding='utf-8')]
+    rows = [json.loads(l) for l in open(f'{REPO}/distill/models/qwen2vl-A-lm/test_predictions.jsonl', encoding='utf-8')]
     gens = ['Real', 'ADM', 'BigGAN', 'GLIDE', 'Midjourney', 'SD15', 'VQDM', 'Wukong']
     tab = {}
     for g in gens:

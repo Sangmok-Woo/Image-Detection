@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-repo = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent
+repo = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
 
 def md(source, cell_id):
     return {
@@ -26,7 +26,7 @@ cells = [
     md(r"""
 # Qwen2-VL 증류 학생 — Colab GPU 서버
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sangmok-Woo/Image-Detection/blob/main/distill/colab_vlm_server.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Sangmok-Woo/Image-Detection/blob/main/distill/src/colab_vlm_server.ipynb)
 
 노트북 PC의 Streamlit 앱(MobileViT 판정·히트맵)은 그대로 두고, **해설을 쓰는 Qwen2-VL만 Colab GPU에서** 돌린다.
 
@@ -48,10 +48,11 @@ t_start = time.time()
 REPO, D = '/content/repo', '/content/repo/distill'
 # 쓸 어댑터: 'A' = 언어 모델만 LoRA (3에포크) / 'B' = 언어 모델 + 프로젝터 LoRA (9장 B안)
 VARIANT = 'A'
-NAME, SHA = {'A': ('qwen2vl-distill/final-3ep', '1f4d48ef800abd4614150e1decf38fc709f3db7053dcd16cf908264767a89bf4'),
-             'B': ('qwen2vl-distill-proj/final', 'a7f1f2d4e036e47be933f7b77aedcbf38a918af3916a5ce8b264a29bdba0026c')}[VARIANT]
+NAME, SHA = {'A': ('models/qwen2vl-A-lm/final-3ep', '1f4d48ef800abd4614150e1decf38fc709f3db7053dcd16cf908264767a89bf4'),
+             'B': ('models/qwen2vl-B-proj/final', 'a7f1f2d4e036e47be933f7b77aedcbf38a918af3916a5ce8b264a29bdba0026c')}[VARIANT]
 ADAPTER = f'{D}/{NAME}'
 os.makedirs(ADAPTER, exist_ok=True)
+os.makedirs(f'{D}/src', exist_ok=True)
 subprocess.run('pkill -f vlm_server.py; pkill -f cloudflared', shell=True)
 
 def bg(cmd, log):
@@ -65,7 +66,7 @@ jobs = {
     'model': bg("python -c \"from huggingface_hub import snapshot_download as s; s('Qwen/Qwen2-VL-2B-Instruct')\"", 'model'),
     'adapter': bg(wget([(f'{ADAPTER}/adapter_model.safetensors', f'{LFS}/distill/{NAME}/adapter_model.safetensors'),
                         (f'{ADAPTER}/adapter_config.json', f'{RAW}/distill/{NAME}/adapter_config.json')]), 'adapter'),
-    'code': bg(wget([(f'{D}/{f}', f'{RAW}/distill/{f}') for f in ('vlm_server.py', 'export_dataset.py', 'train_qlora.py')]), 'code'),
+    'code': bg(wget([(f'{D}/src/{f}', f'{RAW}/distill/src/{f}') for f in ('vlm_server.py', 'export_dataset.py', 'train_qlora.py')]), 'code'),
 }
 if not os.path.exists('/content/cloudflared'):
     jobs['cloudflared'] = bg('wget -q -O /content/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64'
@@ -97,7 +98,7 @@ assert h == SHA, f'어댑터 해시 불일치: {h}'
 
 import requests
 # T4 실측(2026-09-30): fp16 + 어댑터 병합으로 해설 한 건 약 58초. 병합 전에는 115초였다.
-server = subprocess.Popen('exec python distill/vlm_server.py --host 127.0.0.1 --port 8502 --dtype fp16 '
+server = subprocess.Popen('exec python distill/src/vlm_server.py --host 127.0.0.1 --port 8502 --dtype fp16 '
                           f'--adapter distill/{NAME} > /content/server.log 2>&1',
                           shell=True, cwd=REPO)
 # 터널은 모델이 올라가는 동안 같이 연다
@@ -123,7 +124,7 @@ health_local = requests.get('http://127.0.0.1:8502/health', timeout=10).json()
 print(f'서버 준비: {time.time() - t_start:.0f}초', health_local)
 # 서버 소스가 예전 버전이면 조용히 실패하지 않도록 확인한다.
 assert 'multipart' in health_local.get('transports', []), (
-    '서버가 Multipart를 지원하지 않습니다. 최적화된 distill/vlm_server.py를 GitHub main에 반영한 뒤 런타임을 다시 실행하세요.'
+    '서버가 Multipart를 지원하지 않습니다. 최적화된 distill/src/vlm_server.py를 GitHub main에 반영한 뒤 런타임을 다시 실행하세요.'
 )
 
 URL = None
@@ -231,7 +232,7 @@ nb = {
 }
 
 # 별도 경로를 지정하지 않으면 이 스크립트가 들어 있는 프로젝트에 노트북을 저장한다.
-output_path = repo / 'distill' / 'colab_vlm_server.ipynb'
+output_path = repo / 'distill' / 'src' / 'colab_vlm_server.ipynb'
 output_path.parent.mkdir(parents=True, exist_ok=True)
 with output_path.open('w', encoding='utf-8') as f:
     json.dump(nb, f, ensure_ascii=False, indent=1)

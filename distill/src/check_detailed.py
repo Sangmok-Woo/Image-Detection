@@ -1,6 +1,6 @@
 """상세 설명 배치를 검증하고 통과분을 백업한다.
 
-    python distill/check_detailed.py [백업경로]
+    python distill/src/check_detailed.py [백업경로]
 
 검사 항목: JSON 파싱 / id 순서가 배치 파일과 일치 / 필수 키 / 금지 키(정답 누출 방지) /
 heatmap_useful 값 / 다른 배치와 설명 문자열이 겹치는 교차오염.
@@ -12,7 +12,7 @@ import os
 import shutil
 import sys
 
-WORK = 'distill/work'
+WORK = 'distill/src/work'
 REQ = ['id', 'scene', 'evidence_ai', 'evidence_real', 'heatmap_focus_detailed',
        'heatmap_useful', 'heatmap_comment', 'reasoning', 'uncertainty', 'explanation_detailed']
 BAN = ['teacher_verdict', 'teacher_confidence', 'observations']

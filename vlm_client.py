@@ -1,9 +1,9 @@
 """앱(TensorFlow venv)에서 증류 학생 VLM을 부르는 쪽.
 
-1. prepare: 학습 데이터를 만들 때(distill/build_samples.py)와 똑같이 384 정사각형으로
+1. prepare: 학습 데이터를 만들 때(distill/src/build_samples.py)와 똑같이 384 정사각형으로
    통일하고 MobileViT 판정 + Grad-CAM + 크롭을 만든다. 전처리가 다르면 학생이 못 보던
    분포가 들어가므로 함수를 그대로 가져다 쓴다.
-2. stream: distill/vlm_server.py에 이미지 3장과 판정을 실어 보내고 평가문을 받아 흘려보낸다.
+2. stream: distill/src/vlm_server.py에 이미지 3장과 판정을 실어 보내고 평가문을 받아 흘려보낸다.
    이미지를 요청에 직접 싣기 때문에 서버는 로컬이든 Colab·AWS든 상관없다.
 """
 import base64
@@ -22,7 +22,7 @@ _SESSION_LOCK = threading.Lock()
 
 import tensorflow as tf
 from PIL import Image
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'distill'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'distill', 'src'))
 
 from build_samples import SIZE, crop_box, gradcam, make_overlay, standardize
 

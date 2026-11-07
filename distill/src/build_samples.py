@@ -1,9 +1,9 @@
 """1단계: Tiny-GenImage에서 샘플을 뽑아 MobileViT 판정 + Grad-CAM + 크롭을 만든다.
 
 사용법:
-    venv\\Scripts\\python.exe distill\\build_samples.py --shards <parquet 파일들> --n 1000
+    venv\\Scripts\\python.exe distill\\src\\build_samples.py --shards <parquet 파일들> --n 1000
 
-결과 (distill/work/):
+결과 (distill/src/work/):
     std/{id}.jpg      384x384로 통일한 원본 (학생 VLM 입력 1)
     cam/{id}.jpg      Grad-CAM 오버레이 (입력 2)
     crop/{id}.jpg     히트맵 최고점 주변 크롭, 384로 확대 (입력 3)
@@ -25,7 +25,7 @@ import tensorflow as tf
 from matplotlib import colormaps
 from PIL import Image, ImageDraw
 
-MODEL_PATH = 'MobileViT2_Model/MobileViT2_Model.h5'
+MODEL_PATH = 'distill/models/mobilevit2/MobileViT2_Model.h5'
 GENERATORS = ['Real', 'ADM', 'BigGAN', 'GLIDE', 'Midjourney', 'SD14', 'SD15', 'VQDM', 'Wukong']
 SIZE = 384
 CROP = 128  # 384 기준 1/3 크기 영역을 잘라 확대한다
@@ -112,7 +112,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--shards', nargs='+', required=True)
     ap.add_argument('--n', type=int, default=1000)
-    ap.add_argument('--out', default='distill/work')
+    ap.add_argument('--out', default='distill/src/work')
     ap.add_argument('--seed', type=int, default=42)
     args = ap.parse_args()
 

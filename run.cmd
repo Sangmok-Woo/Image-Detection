@@ -10,7 +10,7 @@ if defined VLM_URL goto app
 if exist "%~dp0vlm_url.txt" goto app
 curl -s -o nul http://127.0.0.1:8502/health || (
   if exist "%~dp0venv-train\Scripts\python.exe" (
-    start "Qwen2-VL server" /min "%~dp0venv-train\Scripts\python.exe" "%~dp0distill\vlm_server.py"
+    start "Qwen2-VL server" /min "%~dp0venv-train\Scripts\python.exe" "%~dp0distill\src\vlm_server.py"
   ) else (
     echo [run] venv-train not found - VLM server skipped, MobileViT only.
   )

@@ -277,12 +277,12 @@ B.append(table([
 B.append(para('원본 데이터에서는 실제 사진이 JPEG 직사각형, 생성 이미지가 PNG 정사각형으로 저장되어 있어 파일 형식과 '
               '크기만으로 정답이 드러나는 형식 누수가 존재하였다. 이를 차단하기 위해 모든 이미지를 짧은 변 기준으로 '
               '리사이즈한 뒤 중앙을 384x384로 잘라내고 JPEG로 재인코딩하는 표준화 함수 standardize()를 구현하였다.'))
-B.append(code(src_of('distill/build_samples.py', 'def standardize')))
+B.append(code(src_of('distill/src/build_samples.py', 'def standardize')))
 B.append(para('표준화된 이미지마다 MobileViT v2의 판정 확률을 구하고, 예측한 클래스 방향의 점수로 기울기를 계산하는 '
               'gradcam() 함수로 히트맵을 생성하였다. 이어 crop_box() 함수가 히트맵의 최고점을 중심으로 128x128 영역을 '
               '잡아 384로 3배 확대한 크롭을 만든다. 학생 모델은 이 크롭을 통해 분류기가 가장 강하게 반응한 지점을 '
               '세밀하게 관찰할 수 있다.'))
-B.append(code(src_of('distill/build_samples.py', 'def gradcam') + '\n\n\n' + src_of('distill/build_samples.py', 'def crop_box')))
+B.append(code(src_of('distill/src/build_samples.py', 'def gradcam') + '\n\n\n' + src_of('distill/src/build_samples.py', 'def crop_box')))
 B.append(para('그 결과 샘플 하나는 [그림 8-2]와 같이 원본, 히트맵 오버레이, 크롭의 3장과 메타데이터 한 줄로 구성된다. '
               '아래 예시는 Midjourney로 생성된 이미지(tg0078)이며, MobileViT v2는 이를 실제 사진일 확률 0.89로 오판하였다.'))
 B.append(figure(f'{FIG}/fig_panel_tg0078.png', '[그림 8-2] 학생 모델 입력 3장 예시 (tg0078, Midjourney 생성 이미지)'))
@@ -298,7 +298,7 @@ B.append(para('교사 해설은 Claude Code의 서브에이전트 20개가 50장
               '크롭을 한 장에 배치한 패널 이미지를 직접 관찰하였으며, 정답 라벨과 메타데이터 파일에는 접근하지 못하도록 '
               '제한하여 교사가 정답을 참고해 설명을 맞추는 경로를 원천 차단하였다. 교사와 학생에게 주어지는 질문은 '
               'user_text() 함수가 생성하며, 분류기의 판정과 확률이 질문에 포함된다.'))
-B.append(code(src_of('distill/export_dataset.py', 'def user_text')))
+B.append(code(src_of('distill/src/export_dataset.py', 'def user_text')))
 B.append(para('초기 해설은 평균 201자 분량의 3~5문장이어서 학생이 판단의 중간 과정을 학습하기 어려웠다. 이에 장면 '
               '묘사, AI 생성 쪽 근거, 실제 촬영 쪽 근거, 히트맵 검증, 판단 과정, 불확실성, 결론의 순서로 추론 전 과정을 '
               '서술하는 상세 형식을 설계하였으며, 평균 분량은 712자로 약 3.5배 증가하였다. [그림 8-2]의 이미지에 대해 '
@@ -336,9 +336,9 @@ B.append(h3(*S[4]))
 B.append(para('학생 모델은 Qwen2-VL-2B-Instruct를 4bit NF4로 양자화한 뒤, 비전 인코더를 제외한 언어 모델의 어텐션 및 '
               'MLP 투영 레이어에만 LoRA를 결합하였다. 대상 모듈은 정규식으로 지정하여 이름에 visual이 포함된 비전 '
               '인코더 쪽 모듈이 선택되지 않도록 하였다.'))
-B.append(code(open(f'{REPO}/distill/train_qlora.py', encoding='utf-8').read().split('\n')[25] + '\n'
-              + open(f'{REPO}/distill/train_qlora.py', encoding='utf-8').read().split('\n')[26] + '\n\n'
-              + dedent_block('distill/train_qlora.py', 'model = prepare_model_for_kbit_training', 'model.print_trainable_parameters()')))
+B.append(code(open(f'{REPO}/distill/src/train_qlora.py', encoding='utf-8').read().split('\n')[25] + '\n'
+              + open(f'{REPO}/distill/src/train_qlora.py', encoding='utf-8').read().split('\n')[26] + '\n\n'
+              + dedent_block('distill/src/train_qlora.py', 'model = prepare_model_for_kbit_training', 'model.print_trainable_parameters()')))
 B.append(table([
     ['항목', '설정값'],
     ['베이스 모델', 'Qwen2-VL-2B-Instruct (4bit NF4, 이중 양자화)'],
@@ -428,8 +428,8 @@ B.append(code(src_of('vlm_client.py', 'def stream')))
 B.append(para('서버는 어댑터를 적재한 직후 merge_and_unload()로 LoRA 가중치를 베이스 가중치에 병합한다. 병합하지 않으면 '
               '토큰을 하나 생성할 때마다 196개의 어댑터 모듈을 별도로 거쳐야 하기 때문이다. 생성된 토큰은 '
               'TextIteratorStreamer를 통해 조각 단위로 받아 HTTP chunked 전송으로 즉시 내보낸다.'))
-B.append(code(dedent_block('distill/vlm_server.py', 'model = PeftModel.from_pretrained(model, adapter)', 'model = model.eval()')
-              + '\n\n' + dedent_block('distill/vlm_server.py', 'for piece in streamer:', 'stop.flag = True')))
+B.append(code(dedent_block('distill/src/vlm_server.py', 'model = PeftModel.from_pretrained(model, adapter)', 'model = model.eval()')
+              + '\n\n' + dedent_block('distill/src/vlm_server.py', 'for piece in streamer:', 'stop.flag = True')))
 if os.path.exists(f'{FIG}/fig_app.png'):
     B.append(figure(f'{FIG}/fig_app.png', '[그림 8-6] 웹 서비스 실행 화면 (MobileViT v2 판정, Grad-CAM 히트맵, 학생 VLM 해설)'))
 B.append(para('[그림 8-2]의 이미지를 웹 서비스에 입력한 실제 결과는 다음과 같다. MobileViT v2는 실제 사진(확률 0.8964)으로 '

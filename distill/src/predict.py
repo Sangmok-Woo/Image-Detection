@@ -3,11 +3,11 @@
 torch가 있는 venv에서 돌린다. MobileViT 단계는 TensorFlow가 있는 venv를 subprocess로
 불러 쓴다 (numpy 버전이 달라 한 환경에 못 합친다).
 
-    venv-train\\Scripts\\python.exe distill\\predict.py <이미지> [<이미지> ...]
+    venv-train\\Scripts\\python.exe distill\\src\\predict.py <이미지> [<이미지> ...]
 
 자주 쓰는 옵션:
-    --adapter   LoRA 어댑터 (기본 distill/qwen2vl-distill/final)
-    --out       중간 산출물을 남길 폴더 (기본 distill/predict_out/<파일명>)
+    --adapter   LoRA 어댑터 (기본 distill/models/qwen2vl-A-lm/final)
+    --out       중간 산출물을 남길 폴더 (기본 distill/src/predict_out/<파일명>)
     --tf-python MobileViT를 돌릴 파이썬 (기본 venv/Scripts/python.exe)
     --json      결과를 JSONL로 찍는다
     --keep      orig/cam/crop 이미지를 지우지 않는다 (기본 남김)
@@ -30,9 +30,9 @@ from export_dataset import CONF_KO, USEFUL_KO, VERDICT_KO, user_text
 from train_qlora import MODEL_ID, SIDE, build_messages, load_base, load_images
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))  # 저장소 루트 (distill/src의 두 단계 위)
 DEFAULT_TF_PY = os.path.join(ROOT, 'venv', 'Scripts', 'python.exe')
-DEFAULT_ADAPTER = os.path.join(HERE, 'qwen2vl-distill', 'final')
+DEFAULT_ADAPTER = os.path.join(ROOT, 'distill', 'models', 'qwen2vl-A-lm', 'final')
 
 
 def prepare(image, out, tf_python, panel=False):

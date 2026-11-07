@@ -1,7 +1,7 @@
 """학습 전 점검: 모델이 4비트로 올라가는지, 실제 샘플 한 건의 forward+backward가
 이 GPU에 들어가는지, 시퀀스가 몇 토큰인지 잰다.
 
-    venv-train\\Scripts\\python.exe distill\\smoke_test.py --data distill/dataset [--side 392]
+    venv-train\\Scripts\\python.exe distill\\src\\smoke_test.py --data distill/src/dataset [--side 392]
 """
 import argparse
 import os
@@ -20,7 +20,7 @@ def gb(x):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--data', default='distill/dataset')
+    ap.add_argument('--data', default='distill/src/dataset')
     ap.add_argument('--model', default=T.MODEL_ID)
     ap.add_argument('--side', type=int, default=T.SIDE)
     ap.add_argument('--rank', type=int, default=16)

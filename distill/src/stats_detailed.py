@@ -1,13 +1,13 @@
 """상세 설명(teacher_full)의 최종 통계. 발표용 수치를 한 번에 뽑는다.
 
-    python distill/stats_detailed.py
+    python distill/src/stats_detailed.py
 
 정답 라벨(meta.jsonl)은 여기서만 쓴다. 교사·학생 작업 단계에서는 절대 열지 않는다.
 """
 import collections
 import json
 
-WORK = 'distill/work'
+WORK = 'distill/src/work'
 
 
 def load(path, key='id'):

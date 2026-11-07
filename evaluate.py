@@ -18,7 +18,7 @@ os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 import numpy as np
 import tensorflow as tf
 
-MODEL_PATH = 'MobileViT2_Model/MobileViT2_Model.h5'
+MODEL_PATH = 'distill/models/mobilevit2/MobileViT2_Model.h5'
 IMG_SIZE = (224, 224)
 
 

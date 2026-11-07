@@ -1,6 +1,6 @@
 """2단계 준비: meta.jsonl에서 정답 라벨을 뺀 배치 파일(50개씩)을 만든다. 교사는 이 파일만 본다."""
 import json, os, sys
-work = sys.argv[1] if len(sys.argv) > 1 else 'distill/work'
+work = sys.argv[1] if len(sys.argv) > 1 else 'distill/src/work'
 size = 50
 rows = [json.loads(l) for l in open(f'{work}/meta.jsonl', encoding='utf-8')]
 os.makedirs(f'{work}/batches', exist_ok=True)

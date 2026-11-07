@@ -1,6 +1,6 @@
 # 교사(Claude) 설명 생성 지침
 
-각 샘플마다 `distill/work/panel/{id}.jpg` 한 장을 본다. 가로로 세 칸이다.
+각 샘플마다 `distill/src/work/panel/{id}.jpg` 한 장을 본다. 가로로 세 칸이다.
 1. original: 384×384로 통일한 원본
 2. grad-cam: MobileViT v2가 "자기 판정" 쪽으로 주목한 영역. 흰 박스가 3번 크롭 위치
 3. crop x3: 히트맵 최고점 주변 128px를 3배 확대한 것

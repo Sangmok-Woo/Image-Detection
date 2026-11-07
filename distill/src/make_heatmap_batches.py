@@ -1,11 +1,11 @@
 """신모델 재생성용 배치: 새 분류기 결과 + 보존할 교사 판정·근거를 합친다 (정답 라벨은 뺀다).
 merge 모드: teacher_heatmap/의 새 히트맵 설명을 old_model/teacher의 판정·근거와 합쳐 teacher/에 쓴다.
 
-    python distill/make_heatmap_batches.py          # 배치 만들기 (meta.jsonl에 있는 만큼, 100개씩)
-    python distill/make_heatmap_batches.py merge    # 합치기
+    python distill/src/make_heatmap_batches.py          # 배치 만들기 (meta.jsonl에 있는 만큼, 100개씩)
+    python distill/src/make_heatmap_batches.py merge    # 합치기
 """
 import glob, json, os, sys
-WORK = 'distill/work'
+WORK = 'distill/src/work'
 SIZE = 100
 old_t = {}
 for p in glob.glob(f'{WORK}/old_model/teacher/batch_*.jsonl'):

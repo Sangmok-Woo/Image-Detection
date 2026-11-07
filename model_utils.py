@@ -13,7 +13,7 @@ def load_mobilevit_model():
     저장된 MobileViT2 모델을 로드하고 캐싱합니다.
     경로가 잘못되었을 경우 사용자에게 에러를 알립니다.
     """
-    model_path = 'MobileViT2_Model/MobileViT2_Model.h5'
+    model_path = 'distill/models/mobilevit2/MobileViT2_Model.h5'
     
     if not os.path.exists(model_path):
         st.error(f"모델 파일을 찾을 수 없습니다: {model_path}\n경로를 다시 확인해주세요.")

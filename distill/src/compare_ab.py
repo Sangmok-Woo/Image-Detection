@@ -1,7 +1,7 @@
 """9.3절 실험: A안(언어 모델 LoRA)과 B안(언어 모델 + 프로젝터 LoRA)의 test 채점 결과를 비교한다.
 
-    python distill/compare_ab.py
-    python distill/compare_ab.py --a distill/qwen2vl-distill/test_predictions.jsonl --b distill/qwen2vl-distill-proj/test_predictions.jsonl
+    python distill/src/compare_ab.py
+    python distill/src/compare_ab.py --a distill/models/qwen2vl-A-lm/test_predictions.jsonl --b distill/models/qwen2vl-B-proj/test_predictions.jsonl
 """
 import argparse
 import json
@@ -9,6 +9,7 @@ import os
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+MODELS = os.path.join(os.path.dirname(HERE), 'models')  # distill/models
 
 
 def read_jsonl(path):
@@ -18,8 +19,8 @@ def read_jsonl(path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--a', default=os.path.join(HERE, 'qwen2vl-distill', 'test_predictions.jsonl'))
-    ap.add_argument('--b', default=os.path.join(HERE, 'qwen2vl-distill-proj', 'test_predictions.jsonl'))
+    ap.add_argument('--a', default=os.path.join(MODELS, 'qwen2vl-A-lm', 'test_predictions.jsonl'))
+    ap.add_argument('--b', default=os.path.join(MODELS, 'qwen2vl-B-proj', 'test_predictions.jsonl'))
     args = ap.parse_args()
     a, b = read_jsonl(args.a), read_jsonl(args.b)
     ids = sorted(a.keys() & b.keys())
