@@ -46,9 +46,9 @@ Colab 서버는 **기존 Base64 JSON과 Binary Multipart 둘 다 수신**하고,
 import hashlib, os, re, subprocess, time
 t_start = time.time()
 REPO, D = '/content/repo', '/content/repo/distill'
-# 쓸 어댑터: 'A' = 언어 모델만 LoRA (3에포크) / 'B' = 언어 모델 + 프로젝터 LoRA (9장 B안)
+# 쓸 어댑터: 'A' = 언어 모델만 LoRA (5에포크) / 'B' = 언어 모델 + 프로젝터 LoRA (9장 B안)
 VARIANT = 'A'
-NAME, SHA = {'A': ('models/qwen2vl-A-lm/final', '1f4d48ef800abd4614150e1decf38fc709f3db7053dcd16cf908264767a89bf4'),
+NAME, SHA = {'A': ('models/qwen2vl-A-lm/final', 'd52c48a791d242314ad3d02c282058a225f27ee27f7fa564f8782c1732958a3f'),
              'B': ('models/qwen2vl-B-proj/final', 'a7f1f2d4e036e47be933f7b77aedcbf38a918af3916a5ce8b264a29bdba0026c')}[VARIANT]
 ADAPTER = f'{D}/{NAME}'
 os.makedirs(ADAPTER, exist_ok=True)

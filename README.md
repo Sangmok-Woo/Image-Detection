@@ -189,8 +189,8 @@ venv-train\Scripts\python distill\src\train_qlora.py --data distill\src\dataset 
 - **Grad-CAM은 믿기 어렵습니다.** 판정 근거를 제대로 짚는 경우가 5장 중 1장꼴이고 테두리에 쏠립니다.
 - **분류기 정확도는 후하게 나왔을 수 있습니다.** 평가 이미지가 분류기 학습에 쓰인 분할과 같은
   곳에서 나왔습니다.
-- **A안 어댑터(`distill/models/qwen2vl-A-lm/final/`)는 3에포크판입니다.** 5에포크판은 학습한 PC에만
-  남아 있습니다. 평가 세트 정확도는 둘 다 78%로 같습니다.
+- **A안 어댑터(`distill/models/qwen2vl-A-lm/final/`)는 5에포크판입니다.** 검증 손실이 가장 낮았던
+  지점이며, 3에포크판과 평가 세트 정확도는 78%로 같습니다.
 - **GPU가 없으면 해설이 느립니다.** 위의 Colab 방식을 쓰거나 GPU가 있는 PC에서 실행합니다.
 
 ## 팀

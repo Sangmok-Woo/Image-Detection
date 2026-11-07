@@ -35,7 +35,7 @@ from export_dataset import user_text
 from train_qlora import MODEL_ID, build_messages
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# 기본은 A안(언어 모델 LoRA, 3에포크). B안은 --adapter distill/models/qwen2vl-B-proj/final
+# 기본은 A안(언어 모델 LoRA, 5에포크). B안은 --adapter distill/models/qwen2vl-B-proj/final
 ADAPTERS = [os.path.join(os.path.dirname(HERE), 'models', 'qwen2vl-A-lm', 'final')]
 # 학습 때 이미지 한 변. 다르면 학생이 못 보던 토큰 수가 들어간다.
 SIDE = 336

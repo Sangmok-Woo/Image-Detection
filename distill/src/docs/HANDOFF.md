@@ -8,7 +8,6 @@
 
 | 옮긴다 (Drive) | 크기 | 왜 |
 |---|---|---|
-| `adapter-5ep/` | 82MB | 5에포크판 LoRA 어댑터. 저장소에 없어 비교용으로만 옮긴다 |
 | `tiny_genimage_distill.zip` | 98MB | 데이터셋 전체 (이미지 + train/val/test) |
 | `results/` | 1MB | 채점 결과·학습 로그 |
 
@@ -20,9 +19,8 @@
 | `work/{std,cam,crop,panel}` | 213MB | zip 안 `dataset/images/`로 충분. 다시 만들려면 아래 3단계 |
 | `.git` | 127MB | `git clone` |
 
-A안 3에포크 어댑터는 저장소의 `distill/models/qwen2vl-A-lm/final/`(LFS)에 이미 있다. `adapter-5ep`는
-학습한 PC의 5에포크 `final/`을 복사한 것이다.
-`checkpoint-455`와 가중치 해시가 같다 — 5에포크가 최적점이었고 6에포크는 과적합이다.
+학습된 어댑터(A안 5에포크, B안)는 저장소 `distill/models/`(LFS)에 있어 옮길 필요가 없다.
+A안 `final/`은 `checkpoint-455`와 가중치 해시가 같다 — 5에포크가 최적점이었고 6에포크는 과적합이다.
 
 ## 노트북에서
 
@@ -39,10 +37,8 @@ cd Image-Detection
 ### 2. Drive에서 받은 것 제자리에
 
 ```
-mkdir -p distill/models/qwen2vl-A-lm
-cp -r <Drive>/adapter-5ep  distill/models/qwen2vl-A-lm/final-5ep   # 선택. --adapter로 지정해 쓴다
-cp    <Drive>/tiny_genimage_distill.zip distill/
-cd distill && unzip -q tiny_genimage_distill.zip && cd ..   # → distill/src/dataset/
+cp <Drive>/tiny_genimage_distill.zip distill/src/
+cd distill/src && unzip -q tiny_genimage_distill.zip && cd ../..   # → distill/src/dataset/
 ```
 
 ### 3. 환경 — 두 개로 나뉜다
@@ -75,8 +71,7 @@ CPU로도 돌긴 하지만 한 장에 수 분 걸린다.
 
 Streamlit 앱이 MobileViT 판정·히트맵을 만들고, 해설은 별도 추론 서버(`distill/src/vlm_server.py`)에서
 글자 단위로 받아 온다. Qwen2-VL 베이스 모델(4.4GB)은 저장소에 없고 처음 실행할 때 Hugging Face에서
-받는다. 어댑터는 `distill/models/qwen2vl-A-lm/final`(3에포크, LFS)을 쓴다. 5에포크판은 LFS 서버에 올라간 적이
-없어 저장소에 없다. test 정확도는 둘 다 78%로 같다.
+받는다. 어댑터는 `distill/models/qwen2vl-A-lm/final`(5에포크, LFS)을 쓴다. 3에포크판과 test 정확도는 78%로 같다.
 
 ```
 run.cmd          # 추론 서버(8502) + 앱(8501)을 같이 띄운다
