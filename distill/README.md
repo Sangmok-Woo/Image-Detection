@@ -4,7 +4,7 @@
 distill/
   models/
     mobilevit2/       MobileViT v2 분류기 (MobileViT2_Model.h5 = 신모델, _old.h5 = CIFAKE 구모델)
-    qwen2vl-A-lm/     학생 어댑터 A안 — 언어 모델 LoRA. final-3ep(LFS) / final(5ep, 가중치 미포함), test 78%
+    qwen2vl-A-lm/     학생 어댑터 A안 — 언어 모델 LoRA. final(3에포크, LFS), test 78%
     qwen2vl-B-proj/   학생 어댑터 B안 — 언어 모델 + 프로젝터 LoRA. final(LFS), test 82%
   src/                아래 표의 스크립트 전부, prompts/(교사 지침), work/(교사 해설), docs/(REPORT·HANDOFF·보고서 그림)
 ```

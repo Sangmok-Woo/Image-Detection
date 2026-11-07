@@ -35,8 +35,8 @@ from export_dataset import user_text
 from train_qlora import MODEL_ID, build_messages
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# 5에포크판(final)이 없으면 3에포크판을 쓴다. test 정확도는 둘 다 78%로 같다.
-ADAPTERS = [os.path.join(os.path.dirname(HERE), 'models', 'qwen2vl-A-lm', d) for d in ('final', 'final-3ep')]
+# 기본은 A안(언어 모델 LoRA, 3에포크). B안은 --adapter distill/models/qwen2vl-B-proj/final
+ADAPTERS = [os.path.join(os.path.dirname(HERE), 'models', 'qwen2vl-A-lm', 'final')]
 # 학습 때 이미지 한 변. 다르면 학생이 못 보던 토큰 수가 들어간다.
 SIDE = 336
 # 학습 데이터와 같은 순서: 원본, 히트맵, 크롭
@@ -211,7 +211,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--port', type=int, default=8502)
     ap.add_argument('--host', default='127.0.0.1')
-    ap.add_argument('--adapter', default=None, help='어댑터 폴더 (기본: final → final-3ep)')
+    ap.add_argument('--adapter', default=None, help='어댑터 폴더 (기본: models/qwen2vl-A-lm/final)')
     ap.add_argument('--quant', choices=['auto', '4bit', 'none'], default='auto')
     ap.add_argument('--dtype', choices=['auto', 'bf16', 'fp16'], default='auto',
                     help='GPU 계산 정밀도. T4는 bf16을 에뮬레이션하므로 fp16과 비교해 볼 것')

@@ -8,8 +8,7 @@
 
 | 옮긴다 (Drive) | 크기 | 왜 |
 |---|---|---|
-| `adapter-5ep/` | 82MB | **학습된 LoRA 어댑터.** 다시 만들려면 GPU로 4시간 |
-| `adapter-3ep/` | 82MB | 3에포크판. 비교용이라 없어도 된다 |
+| `adapter-5ep/` | 82MB | 5에포크판 LoRA 어댑터. 저장소에 없어 비교용으로만 옮긴다 |
 | `tiny_genimage_distill.zip` | 98MB | 데이터셋 전체 (이미지 + train/val/test) |
 | `results/` | 1MB | 채점 결과·학습 로그 |
 
@@ -21,7 +20,8 @@
 | `work/{std,cam,crop,panel}` | 213MB | zip 안 `dataset/images/`로 충분. 다시 만들려면 아래 3단계 |
 | `.git` | 127MB | `git clone` |
 
-`adapter-5ep`는 `distill/models/qwen2vl-A-lm/final/`을 그대로 복사한 것이다.
+A안 3에포크 어댑터는 저장소의 `distill/models/qwen2vl-A-lm/final/`(LFS)에 이미 있다. `adapter-5ep`는
+학습한 PC의 5에포크 `final/`을 복사한 것이다.
 `checkpoint-455`와 가중치 해시가 같다 — 5에포크가 최적점이었고 6에포크는 과적합이다.
 
 ## 노트북에서
@@ -40,8 +40,7 @@ cd Image-Detection
 
 ```
 mkdir -p distill/models/qwen2vl-A-lm
-cp -r <Drive>/adapter-5ep  distill/models/qwen2vl-A-lm/final
-cp -r <Drive>/adapter-3ep  distill/models/qwen2vl-A-lm/final-3ep
+cp -r <Drive>/adapter-5ep  distill/models/qwen2vl-A-lm/final-5ep   # 선택. --adapter로 지정해 쓴다
 cp    <Drive>/tiny_genimage_distill.zip distill/
 cd distill && unzip -q tiny_genimage_distill.zip && cd ..   # → distill/src/dataset/
 ```
@@ -76,9 +75,8 @@ CPU로도 돌긴 하지만 한 장에 수 분 걸린다.
 
 Streamlit 앱이 MobileViT 판정·히트맵을 만들고, 해설은 별도 추론 서버(`distill/src/vlm_server.py`)에서
 글자 단위로 받아 온다. Qwen2-VL 베이스 모델(4.4GB)은 저장소에 없고 처음 실행할 때 Hugging Face에서
-받는다. 어댑터는 `distill/models/qwen2vl-A-lm/final-3ep`(LFS)을 쓴다. `final`(5에포크)의 가중치는 LFS
-서버에 올라간 적이 없어 저장소에서 뺐고 설정 파일만 남아 있다. 학습한 PC의 `final/adapter_model.safetensors`를
-제자리에 두면 서버가 그것을 먼저 쓴다. test 정확도는 둘 다 78%로 같다.
+받는다. 어댑터는 `distill/models/qwen2vl-A-lm/final`(3에포크, LFS)을 쓴다. 5에포크판은 LFS 서버에 올라간 적이
+없어 저장소에 없다. test 정확도는 둘 다 78%로 같다.
 
 ```
 run.cmd          # 추론 서버(8502) + 앱(8501)을 같이 띄운다
@@ -93,8 +91,7 @@ run.cmd          # 추론 서버(8502) + 앱(8501)을 같이 띄운다
 Colab으로 돌릴 때:
 
 1. `distill/src/colab_vlm_server.ipynb`를 Colab에 올리고 런타임을 T4 GPU로 둔다
-2. 왼쪽 파일 패널로 어댑터를 `/content`에 올린다. `distill/models/qwen2vl-A-lm/final-3ep` 폴더를 통째로
-   묶어 `adapter-3ep.zip`이라는 이름으로 올리면 된다 (zip 안 최상위가 `final-3ep/`여야 한다)
+2. 어댑터는 노트북이 저장소에서 직접 받는다. B안을 쓰려면 1번 셀 맨 위를 `VARIANT = 'B'`로 바꾼다
 3. 모두 실행 → 5번 셀 끝에 나오는 `https://....trycloudflare.com` 주소를 저장소 루트의 `vlm_url.txt`
    한 줄에 적거나 앱 왼쪽 사이드바에 붙여 넣는다
 

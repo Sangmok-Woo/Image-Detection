@@ -48,7 +48,7 @@ t_start = time.time()
 REPO, D = '/content/repo', '/content/repo/distill'
 # 쓸 어댑터: 'A' = 언어 모델만 LoRA (3에포크) / 'B' = 언어 모델 + 프로젝터 LoRA (9장 B안)
 VARIANT = 'A'
-NAME, SHA = {'A': ('models/qwen2vl-A-lm/final-3ep', '1f4d48ef800abd4614150e1decf38fc709f3db7053dcd16cf908264767a89bf4'),
+NAME, SHA = {'A': ('models/qwen2vl-A-lm/final', '1f4d48ef800abd4614150e1decf38fc709f3db7053dcd16cf908264767a89bf4'),
              'B': ('models/qwen2vl-B-proj/final', 'a7f1f2d4e036e47be933f7b77aedcbf38a918af3916a5ce8b264a29bdba0026c')}[VARIANT]
 ADAPTER = f'{D}/{NAME}'
 os.makedirs(ADAPTER, exist_ok=True)
