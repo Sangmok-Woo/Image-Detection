@@ -44,7 +44,7 @@ ORDER = ('orig', 'cam', 'crop')
 
 state = {'ready': False, 'device': None, 'adapter': None, 'last': None,
          'transports': ['json', 'multipart']}
-lock = threading.Lock()  # 한 번에 한 장만 생성한다
+lock = threading.Lock()  # 한 번에 하나의 요청에 대한 답변을 생성한다
 
 def pick_adapter(explicit=None):
     for d in ([explicit] if explicit else ADAPTERS):
@@ -75,7 +75,7 @@ def load(args):
         state['device'] = f'{name} {quant if quant == "4bit" else str(dtype).split(".")[-1]}'
     else:
         torch.set_num_threads(args.threads)
-        model = Qwen2VLForConditionalGeneration.fromㄴ_pretrained(MODEL_ID, dtype=torch.bfloat16)
+        model = Qwen2VLForConditionalGeneration.from_pretrained(MODEL_ID, dtype=torch.bfloat16)
         state['device'] = f'cpu bf16 ({args.threads} threads)'
         quant = 'none'
     adapter = pick_adapter(args.adapter)
@@ -196,11 +196,17 @@ def make_handler(model, processor, max_new_tokens):
                 state['last'] = {'first_s': round(first or 0, 1), 'total_s': round(total, 1), 'chars': n}
                 print(f'[vlm] 생성 완료: 첫 글자 {first or 0:.1f}초, 전체 {total:.1f}초, {n}자',
                       file=sys.stderr, flush=True)
-        @torch.no_grad()
+        # 추론 모드 적용을 통해 불필요한 부가 작업을 비활성화
+        @torch.inference_mode()
         def _generate(self, enc, streamer, stop):
             try:
+                # 지원하는 Transformers 버전에서는 자동 컴파일을 비활성화한다
+                options = {}
+                if hasattr(getattr(model, 'generation_config', None), 'disable_compile'):
+                    options['disable_compile'] = True
                 model.generate(**enc, max_new_tokens=max_new_tokens, do_sample=False,
-                               streamer=streamer, stopping_criteria=StoppingCriteriaList([stop]))
+                               use_cache=True, streamer=streamer,
+                               stopping_criteria=StoppingCriteriaList([stop]), **options)
             except Exception as e:  # 스트리머가 영원히 기다리지 않게 끝을 알린다
                 print(f'[vlm] 생성 실패: {e!r}', file=sys.stderr, flush=True)
                 streamer.text_queue.put(f'\n[생성 실패: {e}]')
