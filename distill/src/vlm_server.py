@@ -30,7 +30,7 @@ from email.parser import BytesParser
 import torch
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))ㄴ
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from export_dataset import user_text
 from train_qlora import MODEL_ID, build_messages
 
